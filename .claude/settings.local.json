@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "PowerShell(gh api repos/obra/superpowers/readme --jq .download_url)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:api.github.com)",
+      "PowerShell($env:Path = [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"Machine\"\\) + \";\" + [System.Environment]::GetEnvironmentVariable\\(\"Path\",\"User\"\\); where.exe node; where.exe npm; where.exe code)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")",
+      "Bash(claude --version)",
+      "Bash(export PATH=\"$HOME/AppData/Local/Programs/Microsoft VS Code/bin:$PATH\")",
+      "Bash(code --install-extension anthropic.claude-code)",
+      "WebFetch(domain:marketplace.visualstudio.com)",
+      "Bash(npm install *)",
+      "Bash(claude plugin *)",
+      "Bash(node check-tutorial.js)",
+      "Skill(superpowers:writing-plans)",
+      "Skill(superpowers:writing-plans:*)",
+      "Bash(start python *)"
+    ]
+  }
+}
