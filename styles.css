@@ -903,3 +903,11 @@ kbd {
   color: #a0c8ff;
   line-height: 1.45;
 }
+
+/* ── Rock entry nav ── */
+.rock-entry-nav {
+  gap: 8px;
+}
+.rock-entry-nav .nav-btn {
+  font-size: 0.88em;
+}
