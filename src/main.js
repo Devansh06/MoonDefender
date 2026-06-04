@@ -406,7 +406,6 @@ if (localStorage.getItem("mc_el_key")) {
   els.elApiKeyInput.placeholder = "Key saved ✓";
 }
 // Music mute toggle
-music.loadPref();
 els.musicMuteBtn.addEventListener("click", () => {
   const nowMuted = music.toggle();
   els.musicMuteLabel.textContent = nowMuted ? "Off" : "On";
