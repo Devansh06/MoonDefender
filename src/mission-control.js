@@ -11,6 +11,7 @@ let activeUtterance = null;
 
 export const missionControl = {
   isSpeaking: false,
+  _speakGen: 0,
 
   getKey() {
     return localStorage.getItem("mc_el_key") || "";
@@ -23,6 +24,7 @@ export const missionControl = {
 
     this.silence();
     this.isSpeaking = true;
+    const myGen = ++this._speakGen;
 
     bubble.classList.remove("mc-hidden");
     textEl.textContent = "";
@@ -65,7 +67,9 @@ export const missionControl = {
         if (audioCtx.state === "suspended") await audioCtx.resume();
 
         const buf = await res.arrayBuffer();
+        if (myGen !== this._speakGen) return;
         const decoded = await audioCtx.decodeAudioData(buf);
+        if (myGen !== this._speakGen) return;
         const source = audioCtx.createBufferSource();
         source.buffer = decoded;
         source.connect(audioCtx.destination);
@@ -115,6 +119,7 @@ export const missionControl = {
       currentSource = null;
     }
     if ("speechSynthesis" in window) { speechSynthesis.cancel(); activeUtterance = null; }
+    this._speakGen += 1;
     this.isSpeaking = false;
     els.mcBubble?.classList.add("mc-hidden");
   },

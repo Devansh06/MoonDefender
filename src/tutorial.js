@@ -212,7 +212,7 @@ const ROCK_TYPE_STEPS = {
   normal: [
     {
       enter() { missionControl.speak("Normal Rock inbound."); },
-      waitFor() { return !missionControl.isSpeaking; },
+      waitFor() { return !missionControl.isSpeaking || tutorialClock > 6; },
     },
     {
       enter() {
@@ -226,7 +226,7 @@ const ROCK_TYPE_STEPS = {
   comet: [
     {
       enter() { missionControl.speak("Comet inbound."); },
-      waitFor() { return !missionControl.isSpeaking; },
+      waitFor() { return !missionControl.isSpeaking || tutorialClock > 6; },
     },
     {
       enter() {
@@ -240,7 +240,7 @@ const ROCK_TYPE_STEPS = {
   armored: [
     {
       enter() { missionControl.speak("Armored Rock inbound."); },
-      waitFor() { return !missionControl.isSpeaking; },
+      waitFor() { return !missionControl.isSpeaking || tutorialClock > 6; },
     },
     {
       enter() {
@@ -254,7 +254,7 @@ const ROCK_TYPE_STEPS = {
   magnetic: [
     {
       enter() { missionControl.speak("Magnetic Rock inbound."); },
-      waitFor() { return !missionControl.isSpeaking; },
+      waitFor() { return !missionControl.isSpeaking || tutorialClock > 6; },
     },
     {
       enter() {
@@ -268,7 +268,7 @@ const ROCK_TYPE_STEPS = {
   healing: [
     {
       enter() { missionControl.speak("Healing Rock inbound."); },
-      waitFor() { return !missionControl.isSpeaking; },
+      waitFor() { return !missionControl.isSpeaking || tutorialClock > 6; },
     },
     {
       enter() {
@@ -283,7 +283,7 @@ const ROCK_TYPE_STEPS = {
   catastrophe: [
     {
       enter() { missionControl.speak("Catastrophe Rock inbound."); },
-      waitFor() { return !missionControl.isSpeaking; },
+      waitFor() { return !missionControl.isSpeaking || tutorialClock > 6; },
     },
     {
       enter() {

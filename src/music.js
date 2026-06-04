@@ -93,6 +93,7 @@ export const music = {
       bassGain.connect(masterGain);
       bassOsc.start();
       bassOsc.stop(ctx.currentTime + 1.5);
+      bassOsc.addEventListener("ended", () => bassGain.disconnect());
     }, 2500);
   },
 
