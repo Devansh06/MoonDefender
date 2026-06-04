@@ -10,6 +10,7 @@ import { draw, addCometTrail, addBurst } from "./render.js";
 import { updateHud, selectWeapon, lockWeapon, unlockWeapon, lockAllWeapons } from "./hud.js";
 import { tutorialTick, startCombat, startRockTypes, tutEndStartMission, tutEndBackToTutorials } from "./tutorial.js";
 import { missionControl } from "./mission-control.js";
+import { music } from "./music.js";
 
 export function resetGame() {
   state.level = 1;
@@ -312,7 +313,9 @@ function updateFullscreenIcons() {
 }
 
 window.addEventListener("resize", resize);
+let musicStarted = false;
 shell.addEventListener("pointerdown", (event) => {
+  if (!musicStarted) { music.start(); musicStarted = true; }
   if (event.target.closest("button") || els.overlay.classList.contains("show")) return;
   shoot(event.clientX, event.clientY);
 });
@@ -332,6 +335,9 @@ els.friendlyFireBtn.addEventListener("click", () => {
   updateHud();
 });
 els.startBtn.addEventListener("click", resetGame);
+document.addEventListener("pointerdown", () => {
+  if (!musicStarted) { music.start(); musicStarted = true; }
+}, { once: true });
 els.panelCloseBtn.addEventListener("click", resetGame);
 els.tutorialBtn.addEventListener("click", () => {
   els.overlay.classList.remove("show");
@@ -398,6 +404,17 @@ els.elApiKeySaveBtn.addEventListener("click", () => {
 });
 if (localStorage.getItem("mc_el_key")) {
   els.elApiKeyInput.placeholder = "Key saved ✓";
+}
+// Music mute toggle
+music.loadPref();
+els.musicMuteBtn.addEventListener("click", () => {
+  const nowMuted = music.toggle();
+  els.musicMuteLabel.textContent = nowMuted ? "Off" : "On";
+  els.musicMuteBtn.classList.toggle("off", nowMuted);
+});
+if (music.loadPref()) {
+  els.musicMuteLabel.textContent = "Off";
+  els.musicMuteBtn.classList.add("off");
 }
 document.querySelectorAll(".sat-btn").forEach(btn => {
   btn.addEventListener("click", () => {
