@@ -209,58 +209,94 @@ function buildRockTypeSequence(types) {
 }
 
 const ROCK_TYPE_STEPS = {
-  normal: [{
-    enter() {
-      prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("normal", Math.PI * 0.75, true);
-      missionControl.speak("Standard debris. Small ones go down in one hit. Level 3 to 5 splits on impact — one hit becomes two rocks.");
+  normal: [
+    {
+      enter() { missionControl.speak("Normal Rock inbound."); },
+      waitFor() { return !missionControl.isSpeaking; },
     },
-    waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 30; },
-  }],
-  comet: [{
-    enter() {
-      prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("comet", Math.PI * 0.5, true);
-      missionControl.speak("Three times normal speed. Fragile — one hit drops it. Worth 150 bonus points.");
+    {
+      enter() {
+        prevHitsCleared = state.hitsCleared;
+        spawnScriptedRock("normal", Math.PI * 0.75, true);
+        missionControl.speak("Standard debris. Small ones go down in one hit. Level 3 to 5 splits on impact — one hit becomes two rocks.");
+      },
+      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 30; },
     },
-    waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 30; },
-  }],
-  armored: [{
-    enter() {
-      prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("armored", Math.PI * 1.25, true);
-      missionControl.speak("There's a sequence. Learn it or waste shots. Two deflector hits redirect uncracked armor. Or blast to crack it, then one more deflect. Two blasts destroy it entirely.");
+  ],
+  comet: [
+    {
+      enter() { missionControl.speak("Comet inbound."); },
+      waitFor() { return !missionControl.isSpeaking; },
     },
-    waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 40; },
-  }],
-  magnetic: [{
-    enter() {
-      prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("magnetic", Math.PI * 1.0, true);
-      missionControl.speak("That dotted ring is a gravity well. Pulling other rocks toward it. You cannot deflect it — blast it or use Starnet. Kill the source — pull stops instantly.");
+    {
+      enter() {
+        prevHitsCleared = state.hitsCleared;
+        spawnScriptedRock("comet", Math.PI * 0.5, true);
+        missionControl.speak("Three times normal speed. Fragile — one hit drops it. Worth 150 bonus points.");
+      },
+      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 30; },
     },
-    waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 35; },
-  }],
-  healing: [{
-    enter() {
-      spawnScriptedRock("healing", Math.PI * 0.9, true);
-      missionControl.speak("This one's different. Don't shoot it. Figure out how to bring it in safely.");
+  ],
+  armored: [
+    {
+      enter() { missionControl.speak("Armored Rock inbound."); },
+      waitFor() { return !missionControl.isSpeaking; },
     },
-    waitFor() {
-      return !state.rocks.some(r => !r.cleared && r.rockType === "healing") || tutorialClock > 20;
+    {
+      enter() {
+        prevHitsCleared = state.hitsCleared;
+        spawnScriptedRock("armored", Math.PI * 1.25, true);
+        missionControl.speak("There's a sequence. Learn it or waste shots. Two deflector hits redirect uncracked armor. Or blast to crack it, then one more deflect. Two blasts destroy it entirely.");
+      },
+      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 40; },
     },
-  }],
-  catastrophe: [{
-    enter() {
-      prevHitsCleared = state.hitsCleared;
-      state.bossActive = true;
-      spawnBoss();
-      missionControl.speak("Boss-class. Three orbiting companions. Crack the shell first — two hits. One more ends it. Starnet on uncracked armor bounces back. You've been warned.");
+  ],
+  magnetic: [
+    {
+      enter() { missionControl.speak("Magnetic Rock inbound."); },
+      waitFor() { return !missionControl.isSpeaking; },
     },
-    waitFor() {
-      return !state.rocks.some(r => !r.cleared && r.rockType === "boss") || tutorialClock > 60;
+    {
+      enter() {
+        prevHitsCleared = state.hitsCleared;
+        spawnScriptedRock("magnetic", Math.PI * 1.0, true);
+        missionControl.speak("That dotted ring is a gravity well. Pulling other rocks toward it. You cannot deflect it — blast it or use Starnet. Kill the source — pull stops instantly.");
+      },
+      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 35; },
     },
-  }],
+  ],
+  healing: [
+    {
+      enter() { missionControl.speak("Healing Rock inbound."); },
+      waitFor() { return !missionControl.isSpeaking; },
+    },
+    {
+      enter() {
+        spawnScriptedRock("healing", Math.PI * 0.9, true);
+        missionControl.speak("This one's different. Don't shoot it. Figure out how to bring it in safely.");
+      },
+      waitFor() {
+        return !state.rocks.some(r => !r.cleared && r.rockType === "healing") || tutorialClock > 20;
+      },
+    },
+  ],
+  catastrophe: [
+    {
+      enter() { missionControl.speak("Catastrophe Rock inbound."); },
+      waitFor() { return !missionControl.isSpeaking; },
+    },
+    {
+      enter() {
+        prevHitsCleared = state.hitsCleared;
+        state.bossActive = true;
+        spawnBoss();
+        missionControl.speak("Boss-class. Three orbiting companions. Crack the shell first — two hits. One more ends it. Starnet on uncracked armor bounces back. You've been warned.");
+      },
+      waitFor() {
+        return !state.rocks.some(r => !r.cleared && r.rockType === "boss") || tutorialClock > 60;
+      },
+    },
+  ],
 };
 
 function showRockTypesComplete() {
