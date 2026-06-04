@@ -1,7 +1,7 @@
 import { state, els } from "./state.js";
 import { missionControl } from "./mission-control.js";
 import { selectWeapon, unlockWeapon } from "./hud.js";
-import { pauseNormalSpawning, resumeNormalSpawning, setTutorialMode, spawnScriptedRock, resetGame } from "./main.js";
+import { pauseNormalSpawning, setTutorialMode, spawnScriptedRock, resetGame } from "./main.js";
 import { spawnBoss } from "./rocks.js";
 
 let activeSequence = null;

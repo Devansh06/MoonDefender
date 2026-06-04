@@ -13,9 +13,13 @@ export function updateHud() {
   } else {
     els.blasterCooldown.textContent = state.blasterCooldown <= 0 ? "Ready" : `${state.blasterCooldown.toFixed(1)}s`;
   }
-  els.blasterBtn.disabled = state.blasterDisabled || (state.blasterCooldown > 0 && state.selectedWeapon !== "blaster");
-  els.blasterBtn.classList.toggle("ready", state.blasterCooldown <= 0 && !state.blasterDisabled);
-  els.starnetBtn.disabled = state.starnet <= 0;
+  if (!els.blasterBtn.dataset.tutLocked) {
+    els.blasterBtn.disabled = state.blasterDisabled || (state.blasterCooldown > 0 && state.selectedWeapon !== "blaster");
+    els.blasterBtn.classList.toggle("ready", state.blasterCooldown <= 0 && !state.blasterDisabled);
+  }
+  if (!els.starnetBtn.dataset.tutLocked) {
+    els.starnetBtn.disabled = state.starnet <= 0;
+  }
 }
 
 export function selectWeapon(type) {

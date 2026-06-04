@@ -54,6 +54,9 @@ export function resetGame() {
   els.pauseBtn.classList.remove("is-paused");
   selectWeapon("deflector");
   els.tutorialOverlay.classList.remove("show");
+  els.tutorialSelectOverlay.classList.remove("show");
+  els.tutEndScreen?.classList.remove("show");
+  els.rockEntryScreen?.classList.remove("show");
   els.overlay.classList.remove("show");
   for (let i = 0; i < 3; i += 1) spawnRock();
 }

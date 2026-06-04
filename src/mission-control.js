@@ -12,9 +12,6 @@ function getFemaleVoice() {
   ) || voices.find(v => v.lang.startsWith("en")) || null;
 }
 
-if ("speechSynthesis" in window) {
-  speechSynthesis.addEventListener("voiceschanged", () => {});
-}
 
 export const missionControl = {
   speak(text) {
@@ -44,7 +41,7 @@ export const missionControl = {
       };
       speechSynthesis.speak(utter);
     } else {
-      const readMs = Math.max(2000, (text.split(" ").length / 40) * 60000);
+      const readMs = Math.max(2000, (text.split(" ").length / 150) * 60000);
       hideTimer = setTimeout(() => bubble.classList.add("mc-hidden"), readMs);
     }
   },
