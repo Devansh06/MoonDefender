@@ -31,6 +31,8 @@ export const els = {
   prefsOverlay:      document.getElementById("prefsOverlay"),
   prefsCloseBtn:     document.getElementById("prefsCloseBtn"),
   prefsBackBtn:      document.getElementById("prefsBackBtn"),
+  mcBubble:          document.getElementById("mcBubble"),
+  mcText:            document.getElementById("mcText"),
 };
 
 export const canvas = document.getElementById("game");
