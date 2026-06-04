@@ -161,11 +161,25 @@ Triggered by the existing **Tutorial** button on the main menu. Replaces direct-
 Three options:
 1. **Combat Tutorial** — story-driven weapon training
 2. **Rock Types Guide** — learn each rock type, pick entry point
-3. **Reference** — existing static How-to-Play screen (unchanged)
+3. **How-to-Play** — existing static reference screen (unchanged)
 
 ---
 
-## 7. Implementation Notes
+## 7. Numpad Controls
+
+Add numpad key support in `main.js` keyboard handler alongside existing `1` / `2` / `3` bindings:
+
+| Numpad key | Action |
+|---|---|
+| `Numpad1` | Select Deflector (same as `1`) |
+| `Numpad2` | Select Blaster (same as `2`) |
+| `Numpad3` | Activate Starnet (same as `3` / Space) |
+
+Also update the tutorial overlay Controls section in `index.html` to show `1 / Numpad1`, `2 / Numpad2`, `Space / 3 / Numpad3`.
+
+---
+
+## 8. Implementation Notes
 
 - Tutorial sequences are data (array of step objects), not procedural code — easy to extend
 - `spawnScriptedRock` bypasses the normal spawn clock and level-gating
