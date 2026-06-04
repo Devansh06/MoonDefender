@@ -8,7 +8,7 @@ import { activateHazardEvent, deactivateHazardEvent } from "./hazards.js";
 import { shoot, fireLaser, useStarnet, applyBlasterHoming, fireMoonLaser, autoAttack } from "./weapons.js";
 import { draw, addCometTrail, addBurst } from "./render.js";
 import { updateHud, selectWeapon, lockWeapon, unlockWeapon, lockAllWeapons } from "./hud.js";
-import { tutorialTick } from "./tutorial.js";
+import { tutorialTick, startCombat, startRockTypes, tutEndStartMission, tutEndBackToTutorials } from "./tutorial.js";
 
 export function resetGame() {
   state.level = 1;
@@ -340,6 +340,30 @@ els.tutSelBackBtn.addEventListener("click", () => {
 els.tutHowToPlayBtn.addEventListener("click", () => {
   els.tutorialSelectOverlay.classList.remove("show");
   els.tutorialOverlay.classList.add("show");
+});
+
+// Tutorial combat
+els.tutCombatBtn.addEventListener("click", startCombat);
+
+// Tutorial end screen
+els.tutEndStartBtn.addEventListener("click", tutEndStartMission);
+els.tutEndBackBtn.addEventListener("click",  tutEndBackToTutorials);
+
+// Rock types entry screen
+els.tutRocksBtn.addEventListener("click", () => {
+  els.tutorialSelectOverlay.classList.remove("show");
+  els.rockEntryScreen.classList.add("show");
+});
+els.rockEntryCloseBtn.addEventListener("click", () => {
+  els.rockEntryScreen.classList.remove("show");
+  els.overlay.classList.add("show");
+});
+els.rockEntryBackBtn.addEventListener("click", () => {
+  els.rockEntryScreen.classList.remove("show");
+  els.tutorialSelectOverlay.classList.add("show");
+});
+document.querySelectorAll(".rock-entry-btn").forEach(btn => {
+  btn.addEventListener("click", () => startRockTypes(btn.dataset.rock));
 });
 els.tutCloseBtn.addEventListener("click",  () => { els.tutorialOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 els.tutBackBtn.addEventListener("click",   () => { els.tutorialOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
