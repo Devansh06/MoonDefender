@@ -1,7 +1,7 @@
 import { state, els } from "./state.js";
 import { missionControl } from "./mission-control.js";
-import { selectWeapon, lockWeapon, unlockWeapon, lockAllWeapons } from "./hud.js";
-import { pauseNormalSpawning, resumeNormalSpawning, setTutorialMode, spawnScriptedRock } from "./main.js";
+import { selectWeapon, unlockWeapon } from "./hud.js";
+import { pauseNormalSpawning, resumeNormalSpawning, setTutorialMode, spawnScriptedRock, resetGame } from "./main.js";
 import { spawnBoss } from "./rocks.js";
 
 let activeSequence = null;
@@ -114,7 +114,7 @@ const COMBAT_STEPS = [
       spawnScriptedRock("magnetic", Math.PI * 1.5);
       missionControl.speak("Magnetic contact. Deflecting it won't kill the pull — it'll keep dragging others toward it. Switch to Blaster, key 2. Destroy it.");
     },
-    waitFor() { return state.selectedWeapon === "blaster"; },
+    waitFor() { return state.selectedWeapon === "blaster" || tutorialClock > 30; },
   },
   // 4: fire blaster — 3rd hit → starnet unlocks
   {
@@ -168,15 +168,17 @@ function showTutorialEndScreen() {
 
 export function tutEndStartMission() {
   els.tutEndScreen?.classList.remove("show");
-  resumeNormalSpawning();
-  import("./main.js").then(m => m.resetGame());
+  setTutorialMode(false);
+  resetGame();
 }
 
 export function tutEndBackToTutorials() {
   els.tutEndScreen?.classList.remove("show");
+  setTutorialMode(false);
   state.running = false;
   state.rocks = [];
   state.projectiles = [];
+  state.particles = [];
   els.tutorialSelectOverlay.classList.add("show");
 }
 
