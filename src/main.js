@@ -9,6 +9,7 @@ import { shoot, fireLaser, useStarnet, applyBlasterHoming, fireMoonLaser, autoAt
 import { draw, addCometTrail, addBurst } from "./render.js";
 import { updateHud, selectWeapon, lockWeapon, unlockWeapon, lockAllWeapons } from "./hud.js";
 import { tutorialTick, startCombat, startRockTypes, tutEndStartMission, tutEndBackToTutorials } from "./tutorial.js";
+import { missionControl } from "./mission-control.js";
 
 export function resetGame() {
   state.level = 1;
@@ -80,7 +81,7 @@ export function setTutorialMode(on) {
   }
 }
 
-export function spawnScriptedRock(type, angleOverride) {
+export function spawnScriptedRock(type, angleOverride, slow = false) {
   const far = Math.max(state.w, state.h) * 0.68 + state.earth.r;
   const angle = angleOverride !== undefined ? angleOverride : Math.random() * Math.PI * 2;
   const pos = {
@@ -88,7 +89,8 @@ export function spawnScriptedRock(type, angleOverride) {
     y: state.earth.y + Math.sin(angle) * far,
   };
   const targetAngle = Math.atan2(state.earth.y - pos.y, state.earth.x - pos.x);
-  const speed = type === "comet" ? 96 : 64;
+  const speedMult = slow ? 0.45 : 1;
+  const speed = (type === "comet" ? 96 : 64) * speedMult;
   const r = type === "comet" ? 8 : type === "healing" ? 14 : type === "magnetic" ? 19 : 15;
 
   const rock = {
@@ -314,7 +316,10 @@ shell.addEventListener("pointerdown", (event) => {
   if (event.target.closest("button") || els.overlay.classList.contains("show")) return;
   shoot(event.clientX, event.clientY);
 });
-els.exitBtn.addEventListener("click", () => { if (state.running) endGame("Mission abandoned."); });
+els.exitBtn.addEventListener("click", () => {
+  missionControl.silence();
+  if (state.running) endGame("Mission abandoned.");
+});
 els.pauseBtn.addEventListener("click", togglePause);
 els.deflectorBtn.addEventListener("click", () => selectWeapon("deflector"));
 els.blasterBtn.addEventListener("click",   () => selectWeapon("blaster"));
@@ -333,10 +338,12 @@ els.tutorialBtn.addEventListener("click", () => {
   els.tutorialSelectOverlay.classList.add("show");
 });
 els.tutSelCloseBtn.addEventListener("click", () => {
+  missionControl.silence();
   els.tutorialSelectOverlay.classList.remove("show");
   els.overlay.classList.add("show");
 });
 els.tutSelBackBtn.addEventListener("click", () => {
+  missionControl.silence();
   els.tutorialSelectOverlay.classList.remove("show");
   els.overlay.classList.add("show");
 });
@@ -350,7 +357,10 @@ els.tutCombatBtn.addEventListener("click", startCombat);
 
 // Tutorial end screen
 els.tutEndStartBtn.addEventListener("click", tutEndStartMission);
-els.tutEndBackBtn.addEventListener("click",  tutEndBackToTutorials);
+els.tutEndBackBtn.addEventListener("click", () => {
+  missionControl.silence();
+  tutEndBackToTutorials();
+});
 
 // Rock types entry screen
 els.tutRocksBtn.addEventListener("click", () => {
@@ -358,10 +368,12 @@ els.tutRocksBtn.addEventListener("click", () => {
   els.rockEntryScreen.classList.add("show");
 });
 els.rockEntryCloseBtn.addEventListener("click", () => {
+  missionControl.silence();
   els.rockEntryScreen.classList.remove("show");
   els.overlay.classList.add("show");
 });
 els.rockEntryBackBtn.addEventListener("click", () => {
+  missionControl.silence();
   els.rockEntryScreen.classList.remove("show");
   els.tutorialSelectOverlay.classList.add("show");
 });
@@ -390,12 +402,25 @@ els.autoModeBtn.addEventListener("click", () => {
   els.autoModeLabel.textContent = AUTO_ATTACK_LABELS[state.autoAttackMode];
 });
 window.addEventListener("keydown", (event) => {
-  if (event.key === "1" || event.code === "Numpad1") { selectWeapon("deflector"); autoAttack("deflector"); }
-  if (event.key === "2" || event.code === "Numpad2") { selectWeapon("blaster");   autoAttack("blaster"); }
-  if (event.key === "3" || event.key.toLowerCase() === "s" || event.code === "Numpad3") useStarnet();
+  if (event.key === "1" || event.code === "Numpad1") {
+    if (!els.deflectorBtn.dataset.tutLocked) { selectWeapon("deflector"); autoAttack("deflector"); }
+  }
+  if (event.key === "2" || event.code === "Numpad2") {
+    if (!els.blasterBtn.dataset.tutLocked) { selectWeapon("blaster"); autoAttack("blaster"); }
+  }
+  if (event.key === "3" || event.key.toLowerCase() === "s" || event.code === "Numpad3") {
+    if (!els.starnetBtn.dataset.tutLocked) useStarnet();
+  }
   if (event.key === "=" || event.key === "+") cycleSpeed();
   if (event.key.toLowerCase() === "p" || event.key === "Escape") { event.preventDefault(); togglePause(); }
-  if (event.code === "Space") { event.preventDefault(); if (state.running) useStarnet(); else resetGame(); }
+  if (event.code === "Space") {
+    event.preventDefault();
+    if (state.running) {
+      if (!els.starnetBtn.dataset.tutLocked) useStarnet();
+    } else {
+      resetGame();
+    }
+  }
 });
 document.addEventListener("fullscreenchange", updateFullscreenIcons);
 

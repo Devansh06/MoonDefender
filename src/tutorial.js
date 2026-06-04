@@ -41,6 +41,7 @@ function onSequenceComplete() {
 export function tutorialTick(dt) {
   if (!activeSequence || currentStep < 0 || currentStep >= activeSequence.length) return;
   tutorialClock += dt;
+  if (missionControl.isSpeaking) return;
   const step = activeSequence[currentStep];
   if (step.waitFor && step.waitFor()) advanceStep();
 }
@@ -93,7 +94,7 @@ const COMBAT_STEPS = [
   {
     enter() {
       prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("normal", Math.PI * 0.75);
+      spawnScriptedRock("normal", Math.PI * 0.75, true);
       missionControl.speak("Rock inbound. Tap toward it — the Deflector fires a push-pulse. Redirect it.");
     },
     waitFor() { return state.hitsCleared > prevHitsCleared; },
@@ -102,7 +103,7 @@ const COMBAT_STEPS = [
   {
     enter() {
       prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("normal", Math.PI * 0.25);
+      spawnScriptedRock("normal", Math.PI * 0.25, true);
       missionControl.speak("Another one. Different angle. Stay sharp.");
     },
     waitFor() { return state.hitsCleared > prevHitsCleared; },
@@ -111,7 +112,7 @@ const COMBAT_STEPS = [
   {
     enter() {
       unlockWeapon("blaster");
-      spawnScriptedRock("magnetic", Math.PI * 1.5);
+      spawnScriptedRock("magnetic", Math.PI * 1.5, true);
       missionControl.speak("Magnetic contact. Deflecting it won't kill the pull — it'll keep dragging others toward it. Switch to Blaster, key 2. Destroy it.");
     },
     waitFor() { return state.selectedWeapon === "blaster" || tutorialClock > 30; },
@@ -138,7 +139,7 @@ const COMBAT_STEPS = [
   {
     enter() {
       prevStarnetId = state.starnetActivationId;
-      [Math.PI * 0.1, Math.PI * 0.6, Math.PI * 1.1, Math.PI * 1.7].forEach(a => spawnScriptedRock("normal", a));
+      [Math.PI * 0.1, Math.PI * 0.6, Math.PI * 1.1, Math.PI * 1.7].forEach(a => spawnScriptedRock("normal", a, true));
       missionControl.speak("Four contacts — too many to pick off. Starnet deploys a full ring shield. Space bar. Use it.");
     },
     waitFor() { return state.starnetActivationId > prevStarnetId; },
@@ -211,7 +212,7 @@ const ROCK_TYPE_STEPS = {
   normal: [{
     enter() {
       prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("normal", Math.PI * 0.75);
+      spawnScriptedRock("normal", Math.PI * 0.75, true);
       missionControl.speak("Standard debris. Small ones go down in one hit. Level 3 to 5 splits on impact — one hit becomes two rocks.");
     },
     waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 30; },
@@ -219,7 +220,7 @@ const ROCK_TYPE_STEPS = {
   comet: [{
     enter() {
       prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("comet", Math.PI * 0.5);
+      spawnScriptedRock("comet", Math.PI * 0.5, true);
       missionControl.speak("Three times normal speed. Fragile — one hit drops it. Worth 150 bonus points.");
     },
     waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 30; },
@@ -227,7 +228,7 @@ const ROCK_TYPE_STEPS = {
   armored: [{
     enter() {
       prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("armored", Math.PI * 1.25);
+      spawnScriptedRock("armored", Math.PI * 1.25, true);
       missionControl.speak("There's a sequence. Learn it or waste shots. Two deflector hits redirect uncracked armor. Or blast to crack it, then one more deflect. Two blasts destroy it entirely.");
     },
     waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 40; },
@@ -235,14 +236,14 @@ const ROCK_TYPE_STEPS = {
   magnetic: [{
     enter() {
       prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("magnetic", Math.PI * 1.0);
+      spawnScriptedRock("magnetic", Math.PI * 1.0, true);
       missionControl.speak("That dotted ring is a gravity well. Pulling other rocks toward it. You cannot deflect it — blast it or use Starnet. Kill the source — pull stops instantly.");
     },
     waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 35; },
   }],
   healing: [{
     enter() {
-      spawnScriptedRock("healing", Math.PI * 0.9);
+      spawnScriptedRock("healing", Math.PI * 0.9, true);
       missionControl.speak("This one's different. Don't shoot it. Figure out how to bring it in safely.");
     },
     waitFor() {
