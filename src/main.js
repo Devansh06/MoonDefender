@@ -325,7 +325,22 @@ els.friendlyFireBtn.addEventListener("click", () => {
 });
 els.startBtn.addEventListener("click", resetGame);
 els.panelCloseBtn.addEventListener("click", resetGame);
-els.tutorialBtn.addEventListener("click",  () => { els.overlay.classList.remove("show"); els.tutorialOverlay.classList.add("show"); });
+els.tutorialBtn.addEventListener("click", () => {
+  els.overlay.classList.remove("show");
+  els.tutorialSelectOverlay.classList.add("show");
+});
+els.tutSelCloseBtn.addEventListener("click", () => {
+  els.tutorialSelectOverlay.classList.remove("show");
+  els.overlay.classList.add("show");
+});
+els.tutSelBackBtn.addEventListener("click", () => {
+  els.tutorialSelectOverlay.classList.remove("show");
+  els.overlay.classList.add("show");
+});
+els.tutHowToPlayBtn.addEventListener("click", () => {
+  els.tutorialSelectOverlay.classList.remove("show");
+  els.tutorialOverlay.classList.add("show");
+});
 els.tutCloseBtn.addEventListener("click",  () => { els.tutorialOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 els.tutBackBtn.addEventListener("click",   () => { els.tutorialOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 els.tutPlayBtn.addEventListener("click",   () => { els.tutorialOverlay.classList.remove("show"); resetGame(); });
