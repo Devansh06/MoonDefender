@@ -296,9 +296,9 @@ els.autoModeBtn.addEventListener("click", () => {
   els.autoModeLabel.textContent = AUTO_ATTACK_LABELS[state.autoAttackMode];
 });
 window.addEventListener("keydown", (event) => {
-  if (event.key === "1") { selectWeapon("deflector"); autoAttack("deflector"); }
-  if (event.key === "2") { selectWeapon("blaster");   autoAttack("blaster"); }
-  if (event.key === "3" || event.key.toLowerCase() === "s") useStarnet();
+  if (event.key === "1" || event.code === "Numpad1") { selectWeapon("deflector"); autoAttack("deflector"); }
+  if (event.key === "2" || event.code === "Numpad2") { selectWeapon("blaster");   autoAttack("blaster"); }
+  if (event.key === "3" || event.key.toLowerCase() === "s" || event.code === "Numpad3") useStarnet();
   if (event.key === "=" || event.key === "+") cycleSpeed();
   if (event.key.toLowerCase() === "p" || event.key === "Escape") { event.preventDefault(); togglePause(); }
   if (event.code === "Space") { event.preventDefault(); if (state.running) useStarnet(); else resetGame(); }
