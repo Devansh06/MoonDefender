@@ -7,6 +7,7 @@ let typewriterTimer = null;
 let hideTimer = null;
 let audioCtx = null;
 let currentSource = null;
+let activeUtterance = null;
 
 export const missionControl = {
   isSpeaking: false,
@@ -71,6 +72,7 @@ export const missionControl = {
         currentSource = source;
         source.onended = () => {
           this.isSpeaking = false;
+          source.disconnect();
           currentSource = null;
           hideTimer = setTimeout(() => bubble.classList.add("mc-hidden"), 1200);
         };
@@ -84,12 +86,14 @@ export const missionControl = {
     // Fallback: Web Speech API
     if ("speechSynthesis" in window) {
       const utter = new SpeechSynthesisUtterance(text);
+      activeUtterance = utter;
       const voices = speechSynthesis.getVoices();
       const female = voices.find(v =>
         /female|woman|samantha|karen|zira|victoria|moira|fiona|tessa/i.test(v.name)
       ) || voices.find(v => v.lang.startsWith("en")) || null;
       if (female) utter.voice = female;
       utter.onend = () => {
+        if (utter !== activeUtterance) return;
         this.isSpeaking = false;
         hideTimer = setTimeout(() => bubble.classList.add("mc-hidden"), 1200);
       };
@@ -107,10 +111,10 @@ export const missionControl = {
     if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
     if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
     if (currentSource) {
-      try { currentSource.stop(); } catch (_) {}
+      try { currentSource.stop(); currentSource.disconnect(); } catch (_) {}
       currentSource = null;
     }
-    if ("speechSynthesis" in window) speechSynthesis.cancel();
+    if ("speechSynthesis" in window) { speechSynthesis.cancel(); activeUtterance = null; }
     this.isSpeaking = false;
     els.mcBubble?.classList.add("mc-hidden");
   },
