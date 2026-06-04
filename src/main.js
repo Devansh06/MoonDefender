@@ -16,6 +16,7 @@ export function resetGame() {
   state.damage = 0;
   state.score = 0;
   state.deflectionsCleared = 0;
+  state.hitsCleared = 0;
   state.starnet = 2;
   state.blasterCooldown = 0;
   state.selectedWeapon = "deflector";

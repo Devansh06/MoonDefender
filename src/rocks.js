@@ -243,7 +243,8 @@ export function clearRock(rock, destroyed) {
     state.score += destroyed ? rock.level * 75 : successfulDeflection ? rock.level * 40 : 0;
     if (destroyed || successfulDeflection) {
       state.deflectionsCleared += 1;
-      if (state.deflectionsCleared % 3 === 0) state.starnet += 1;
+      state.hitsCleared += 1;
+      if (state.hitsCleared % 3 === 0) state.starnet += 1;
     }
   }
   addBurst(rock.x, rock.y, destroyed ? "#ffcf70" : "#8ff0b2", 16 + rock.level * 4);

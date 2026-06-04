@@ -48,7 +48,7 @@ export const state = {
   // game progress
   level: 1, levelClock: LEVEL_TIME,
   spawnClock: 0, damage: 0, score: 0,
-  deflectionsCleared: 0, starnet: 2,
+  deflectionsCleared: 0, hitsCleared: 0, starnet: 2,
   blasterCooldown: 0, earthSpin: 0, shake: 0,
   // collections
   projectiles: [], rocks: [], particles: [],
@@ -73,6 +73,8 @@ export const state = {
   spawnRateMultiplier: 1, blasterDisabled: false,
   // boss
   bossActive: false,
+  // tutorial
+  tutorialMode: false,
   // auto-attack
   autoAttackMode: AUTO_ATTACK_MODES[0],
   // preferences (persist across resets)
