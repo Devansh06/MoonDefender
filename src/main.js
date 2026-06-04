@@ -7,7 +7,8 @@ import { spawnRock, spawnBoss, markArenaState, isOutsideArena, bounceFromMoon, c
 import { activateHazardEvent, deactivateHazardEvent } from "./hazards.js";
 import { shoot, fireLaser, useStarnet, applyBlasterHoming, fireMoonLaser, autoAttack } from "./weapons.js";
 import { draw, addCometTrail, addBurst } from "./render.js";
-import { updateHud, selectWeapon } from "./hud.js";
+import { updateHud, selectWeapon, lockWeapon, unlockWeapon, lockAllWeapons } from "./hud.js";
+import { tutorialTick } from "./tutorial.js";
 
 export function resetGame() {
   state.level = 1;
@@ -55,6 +56,55 @@ export function resetGame() {
   els.tutorialOverlay.classList.remove("show");
   els.overlay.classList.remove("show");
   for (let i = 0; i < 3; i += 1) spawnRock();
+}
+
+export function pauseNormalSpawning() {
+  state.spawnClock = 999999;
+}
+
+export function resumeNormalSpawning() {
+  state.spawnClock = 0;
+}
+
+export function setTutorialMode(on) {
+  state.tutorialMode = on;
+  if (!on) {
+    unlockWeapon("deflector");
+    unlockWeapon("blaster");
+    unlockWeapon("starnet");
+  }
+}
+
+export function spawnScriptedRock(type, angleOverride) {
+  const far = Math.max(state.w, state.h) * 0.68 + state.earth.r;
+  const angle = angleOverride !== undefined ? angleOverride : Math.random() * Math.PI * 2;
+  const pos = {
+    x: state.earth.x + Math.cos(angle) * far,
+    y: state.earth.y + Math.sin(angle) * far,
+  };
+  const targetAngle = Math.atan2(state.earth.y - pos.y, state.earth.x - pos.x);
+  const speed = type === "comet" ? 96 : 64;
+  const r = type === "comet" ? 8 : type === "healing" ? 14 : type === "magnetic" ? 19 : 15;
+
+  const rock = {
+    x: pos.x, y: pos.y,
+    vx: Math.cos(targetAngle) * speed,
+    vy: Math.sin(targetAngle) * speed,
+    level: type === "boss" ? 5 : 2,
+    rockType: type,
+    breakCount: 0, r,
+    seed: Math.random() * 999,
+    cleared: false, deflected: false,
+    spiral: false, enteredArena: false,
+    earthSeeking: false, path: [], pathClock: 0,
+    armorHits: 0, deflectorHits: 0, cracked: false,
+    starnetActivationId: 0, starnetOrigin: null,
+    starnetHit: false, lastStarnetDistance: 0,
+  };
+  state.rocks.push(rock);
+  if (type === "magnetic") {
+    import("./rocks.js").then(m => m.spawnMagneticCompanions(rock));
+  }
 }
 
 export function nextLevel() {
@@ -216,7 +266,8 @@ function update(dt) {
     state.levelClock = 5;
   }
 
-  if (state.levelClock <= 0 && !state.bossActive) nextLevel();
+  if (state.levelClock <= 0 && !state.bossActive && !state.tutorialMode) nextLevel();
+  if (state.tutorialMode) tutorialTick(dt);
   if (state.damage >= 100) endGame("Earth took too many hits.");
 }
 
