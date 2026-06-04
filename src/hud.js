@@ -23,3 +23,21 @@ export function selectWeapon(type) {
   els.deflectorBtn.classList.toggle("active", type === "deflector");
   els.blasterBtn.classList.toggle("active", type === "blaster");
 }
+
+export function lockWeapon(name) {
+  const btn = name === "deflector" ? els.deflectorBtn
+            : name === "blaster"   ? els.blasterBtn
+            : name === "starnet"   ? els.starnetBtn : null;
+  if (btn) { btn.disabled = true; btn.dataset.tutLocked = "1"; }
+}
+
+export function unlockWeapon(name) {
+  const btn = name === "deflector" ? els.deflectorBtn
+            : name === "blaster"   ? els.blasterBtn
+            : name === "starnet"   ? els.starnetBtn : null;
+  if (btn) { btn.disabled = false; delete btn.dataset.tutLocked; }
+}
+
+export function lockAllWeapons() {
+  ["deflector", "blaster", "starnet"].forEach(lockWeapon);
+}
