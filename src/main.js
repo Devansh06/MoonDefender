@@ -3,7 +3,7 @@ import { rand, norm } from "./utils.js";
 import { els, canvas, shell, state } from "./state.js";
 import { resize, updateMoon, addEarthDamage } from "./world.js";
 import { resolveRockCollisions, integrateRock } from "./physics.js";
-import { spawnRock, spawnBoss, markArenaState, isOutsideArena, bounceFromMoon, clearRock, applyMagneticPull, applyStarnetField, hitRock, predictPath, updateCatastropheCompanions } from "./rocks.js";
+import { spawnRock, spawnBoss, markArenaState, isOutsideArena, bounceFromMoon, clearRock, applyMagneticPull, applyStarnetField, hitRock, predictPath, updateCatastropheCompanions, spawnMagneticCompanions } from "./rocks.js";
 import { activateHazardEvent, deactivateHazardEvent } from "./hazards.js";
 import { shoot, fireLaser, useStarnet, applyBlasterHoming, fireMoonLaser, autoAttack } from "./weapons.js";
 import { draw, addCometTrail, addBurst } from "./render.js";
@@ -68,7 +68,9 @@ export function resumeNormalSpawning() {
 
 export function setTutorialMode(on) {
   state.tutorialMode = on;
-  if (!on) {
+  if (on) {
+    lockAllWeapons();
+  } else {
     unlockWeapon("deflector");
     unlockWeapon("blaster");
     unlockWeapon("starnet");
@@ -102,9 +104,7 @@ export function spawnScriptedRock(type, angleOverride) {
     starnetHit: false, lastStarnetDistance: 0,
   };
   state.rocks.push(rock);
-  if (type === "magnetic") {
-    import("./rocks.js").then(m => m.spawnMagneticCompanions(rock));
-  }
+  if (type === "magnetic") spawnMagneticCompanions(rock);
 }
 
 export function nextLevel() {
