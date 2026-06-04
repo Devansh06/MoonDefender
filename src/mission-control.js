@@ -3,6 +3,7 @@ import { els } from "./state.js";
 const TYPEWRITER_SPEED = 30; // characters per second
 
 let typewriterTimer = null;
+let hideTimer = null;
 
 function getFemaleVoice() {
   const voices = speechSynthesis.getVoices();
@@ -39,17 +40,18 @@ export const missionControl = {
       const voice = getFemaleVoice();
       if (voice) utter.voice = voice;
       utter.onend = () => {
-        setTimeout(() => bubble.classList.add("mc-hidden"), 1400);
+        hideTimer = setTimeout(() => bubble.classList.add("mc-hidden"), 1400);
       };
       speechSynthesis.speak(utter);
     } else {
       const readMs = Math.max(2000, (text.split(" ").length / 40) * 60000);
-      setTimeout(() => bubble.classList.add("mc-hidden"), readMs);
+      hideTimer = setTimeout(() => bubble.classList.add("mc-hidden"), readMs);
     }
   },
 
   silence() {
     if (typewriterTimer) { clearInterval(typewriterTimer); typewriterTimer = null; }
+    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
     if ("speechSynthesis" in window) speechSynthesis.cancel();
     els.mcBubble?.classList.add("mc-hidden");
   },
