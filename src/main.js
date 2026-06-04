@@ -386,6 +386,19 @@ els.tutPlayBtn.addEventListener("click",   () => { els.tutorialOverlay.classList
 els.prefsBtn.addEventListener("click",      () => { els.overlay.classList.remove("show"); els.prefsOverlay.classList.add("show"); });
 els.prefsCloseBtn.addEventListener("click", () => { els.prefsOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 els.prefsBackBtn.addEventListener("click",  () => { els.prefsOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
+// ElevenLabs API key save
+els.elApiKeySaveBtn.addEventListener("click", () => {
+  const key = els.elApiKeyInput.value.trim();
+  if (key) {
+    localStorage.setItem("mc_el_key", key);
+    els.elApiKeyInput.value = "";
+    els.elApiKeyInput.placeholder = "Key saved ✓";
+    setTimeout(() => { els.elApiKeyInput.placeholder = "Paste API key"; }, 2000);
+  }
+});
+if (localStorage.getItem("mc_el_key")) {
+  els.elApiKeyInput.placeholder = "Key saved ✓";
+}
 document.querySelectorAll(".sat-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     state.satelliteOffset = parseInt(btn.dataset.offset, 10) * Math.PI / 180;
