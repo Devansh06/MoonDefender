@@ -1,3 +1,5 @@
 .codex-*
 serve-local.cjs
 .superpowers/
+.agents/
+.claude/
