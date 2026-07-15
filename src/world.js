@@ -1,5 +1,5 @@
 import { TAU, EARTH_MASS, MOON_MASS, EARTH_TEXTURE_URL } from "./constants.js";
-import { clamp, rand, positiveMod } from "./utils.js";
+import { clamp, rand } from "./utils.js";
 import { canvas, ctx, state } from "./state.js";
 
 export function starnetRange() {
@@ -46,6 +46,8 @@ export function resize() {
     r: rand(0.4, 1.6),
     a: rand(0.3, 0.95),
   }));
+  state.arenaLeft  = Math.min(state.w * 0.12, 140);
+  state.arenaRight = state.w - Math.min(state.w * 0.08, 90);
 }
 
 export function updateMoon(dt) {
@@ -97,7 +99,7 @@ export function geoToScreen(lat, lon) {
   };
 }
 
-export function screenToGeo(x, y) {
+function screenToGeo(x, y) {
   const nx = clamp((x - state.earth.x) / state.earth.r, -0.98, 0.98);
   const ny = clamp((y - state.earth.y) / state.earth.r, -0.98, 0.98);
   const z = Math.sqrt(Math.max(0.001, 1 - nx * nx - ny * ny));
@@ -107,7 +109,7 @@ export function screenToGeo(x, y) {
   };
 }
 
-export function countryAt(latRad, lonRad) {
+function countryAt(latRad, lonRad) {
   const lat = (latRad * 180) / Math.PI;
   const lon = (lonRad * 180) / Math.PI;
   const boxes = [
@@ -142,13 +144,13 @@ export function countryAt(latRad, lonRad) {
   return "Pacific Ocean sector";
 }
 
-export function isOceanHit(rock) {
+function isOceanHit(rock) {
   const lon = Math.atan2(rock.y - state.earth.y, rock.x - state.earth.x) - state.earthSpin;
   const latWave = Math.sin(lon * 2.3) + Math.cos(lon * 4.2 + 1.1) * 0.55;
   return latWave < 0.12;
 }
 
-export function repeatedHitFactor(rock) {
+function repeatedHitFactor(rock) {
   const angle = Math.atan2(rock.y - state.earth.y, rock.x - state.earth.x) - state.earthSpin;
   let factor = 1;
   for (const hit of state.impactMemory) {
@@ -159,11 +161,10 @@ export function repeatedHitFactor(rock) {
   return clamp(factor, 0.22, 1);
 }
 
-export function registerImpact(rock, actualDamage) {
+function registerImpact(rock, actualDamage) {
   const geo = screenToGeo(rock.x, rock.y);
   const country = countryAt(geo.lat, geo.lon);
-  state.lostCountry = country;
-  state.lostCountries.add(country);
+  state.impactLog.push({ country, damage: Math.round(actualDamage), rockType: rock.rockType || "normal" });
   state.burnSites.push({
     lat: geo.lat,
     lon: geo.lon,

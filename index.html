@@ -23,37 +23,26 @@
           <span>Score</span>
           <strong id="score">0</strong>
         </div>
-        <div class="metric lost">
-          <span>Lost</span>
-          <strong id="lostCountry">None</strong>
-        </div>
       </section>
 
-      <aside class="weapon-panel" aria-label="Weapon controls">
+      <aside class="weapon-panel" aria-label="Game controls">
         <button id="exitBtn" class="exit-btn" type="button" title="Exit to menu">&#x2715;</button>
         <button id="pauseBtn" class="hud-btn pause-btn" type="button" title="Pause">&#x23F8;</button>
-        <button id="deflectorBtn" class="weapon active" type="button" title="Deflector projectile">
-          <span class="icon">-&gt;</span>
-          <span>Deflect</span>
-        </button>
-        <button id="blasterBtn" class="weapon" type="button" title="Satellite blaster, 1.5 second refill">
-          <span class="icon">*</span>
-          <span>Blast</span>
-          <small id="blasterCooldown">Ready</small>
-        </button>
-        <button id="starnetBtn" class="weapon" type="button" title="Earth Starnet failsafe">
-          <span class="icon">O</span>
-          <span>Starnet</span>
-          <small id="starnetCount">2</small>
-        </button>
-        <button id="targetBtn" class="hud-btn target-btn" type="button" title="Cycle auto-attack targeting mode"><small id="targetLabel">Auto</small></button>
-        <button id="speedBtn" class="hud-btn speed-btn" type="button" title="Game speed (cycle 1× / 1.5× / 2×)">1×</button>
         <button id="fullscreenHudBtn" class="hud-btn" type="button" title="Toggle fullscreen">&#x26F6;</button>
       </aside>
+
+      <!-- Hidden buttons kept for tutorial gating and auto-attack wiring -->
+      <div aria-hidden="true" style="display:none">
+        <button id="deflectorBtn" class="weapon active" type="button"></button>
+        <button id="blasterBtn" class="weapon" type="button"></button>
+        <button id="starnetBtn" type="button"></button>
+        <button id="targetBtn" type="button"><small id="targetLabel">Auto</small></button>
+      </div>
 
       <!-- Name / callsign modal (shown on first visit) -->
       <div id="nameModal" class="overlay">
         <div class="panel">
+          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
           <div class="panel-header">
             <span style="margin:0;font-size:15px;color:#031019;font-weight:800;letter-spacing:.06em">MOON DEFENDER</span>
           </div>
@@ -61,6 +50,7 @@
             <h2 style="margin:0 0 8px;font-size:24px">Welcome, Defender</h2>
             <p style="margin:0 0 22px">Enter your callsign to appear on the global leaderboard.</p>
             <input id="nameInput" class="name-input" type="text" maxlength="20" placeholder="Your callsign…" autocomplete="off" spellcheck="false">
+            <p id="nameError" style="display:none;margin:8px 0 0;font-size:13px;color:#ff6e7b">Name is taken by another player.</p>
             <nav class="panel-nav" style="margin-top:12px">
               <button id="nameConfirmBtn" class="nav-btn nav-primary" type="button">Enter</button>
               <button id="nameSkipBtn" class="nav-btn" type="button">Play as Guest</button>
@@ -72,6 +62,7 @@
       <!-- Start / Game Over overlay -->
       <div id="overlay" class="overlay show">
         <div class="panel panel-main">
+          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
           <div class="panel-header">
             <button id="panelCloseBtn" class="panel-close" type="button" aria-label="Close">&#x2715;</button>
           </div>
@@ -83,7 +74,6 @@
               <button id="startBtn" class="nav-btn nav-primary" type="button">Start Mission</button>
               <button id="tutorialBtn" class="nav-btn" type="button">Tutorial</button>
               <button id="prefsBtn" class="nav-btn" type="button">Preferences</button>
-              <button id="fullscreenBtn" class="nav-btn nav-icon" type="button" title="Toggle fullscreen">&#x26F6;</button>
             </nav>
 
             <section class="lb-section">
@@ -99,9 +89,52 @@
         </div>
       </div>
 
+      <!-- End-game overlay -->
+      <div id="endScreen" class="overlay">
+        <div class="panel panel-end">
+          <button id="endFullscreenBtn" class="panel-fs-btn" type="button" title="Toggle Fullscreen"></button>
+          <div class="panel-body">
+            <h1 id="endTitle">Mission Report</h1>
+            <p id="endMsg"></p>
+            <p id="endScore" class="end-score"></p>
+
+            <div class="end-accuracy">
+              <span>Accuracy</span>
+              <strong id="endAccuracy">—</strong>
+            </div>
+
+            <table class="stats-table">
+              <thead>
+                <tr><th>Rock</th><th>Destroyed</th><th>Deflected</th></tr>
+              </thead>
+              <tbody id="statsRockBody"></tbody>
+            </table>
+
+            <div class="stats-sectors">
+              <p class="stats-label">Impact Zones</p>
+              <canvas id="worldMapCanvas" class="world-map-canvas" width="480" height="240"></canvas>
+            </div>
+
+            <nav class="end-nav">
+              <button id="endRestartBtn" class="nav-btn nav-primary" type="button">Restart</button>
+              <button id="endMenuBtn" class="nav-btn" type="button">Main Menu</button>
+              <button id="endLbBtn" class="nav-btn" type="button">Leaderboard</button>
+            </nav>
+
+            <section id="endLeaderboard" class="lb-section" style="display:none">
+              <div class="lb-header">
+                <span class="lb-title">Global High Scores</span>
+              </div>
+              <div id="endLbList" class="lb-list"></div>
+            </section>
+          </div>
+        </div>
+      </div>
+
       <!-- Tutorial overlay -->
       <div id="tutorialOverlay" class="overlay">
         <div class="tut-panel">
+          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
 
           <div class="tut-header">
             <h2>How to Play</h2>
@@ -116,7 +149,8 @@
                 <div class="ctrl-item"><kbd><span class="show-touch">Tap</span><span class="show-mouse">Click</span></kbd><span>Shoot toward that point</span></div>
                 <div class="ctrl-item kbd-only"><kbd>1 / Numpad1</kbd><span>Deflector — auto-fires using target mode</span></div>
                 <div class="ctrl-item kbd-only"><kbd>2 / Numpad2</kbd><span>Blaster — auto-fires using target mode</span></div>
-                <div class="ctrl-item kbd-only"><kbd>Space / 3</kbd><span>Starnet shield + moon lasers</span></div>
+                <div class="ctrl-item"><kbd><span class="show-touch">Tap</span><span class="show-mouse">Click</span> Earth</kbd><span>Starnet shield + moon lasers</span></div>
+                <div class="ctrl-item kbd-only"><kbd>Space / 3</kbd><span>Starnet (keyboard shortcut)</span></div>
                 <div class="ctrl-item"><kbd>Target btn</kbd><span>Cycle auto-attack: Auto · Special · Closest · Danger · Fastest</span></div>
                 <div class="ctrl-item kbd-only"><kbd>P / Esc</kbd><span>Pause</span></div>
               </div>
@@ -256,6 +290,7 @@
       <!-- Tutorial select overlay -->
       <div id="tutorialSelectOverlay" class="overlay">
         <div class="panel">
+          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
           <div class="panel-header">
             <button id="tutSelCloseBtn" class="panel-close" type="button" aria-label="Close">&#x2715;</button>
           </div>
@@ -275,6 +310,7 @@
       <!-- Tutorial 1 end screen -->
       <div id="tutEndScreen" class="overlay">
         <div class="panel">
+          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
           <div class="panel-body" style="text-align:center;padding-top:2rem">
             <h2>Training Complete</h2>
             <p style="color:var(--muted);margin:1rem 0 1.8rem">Earth is still standing. Your call, soldier.</p>
@@ -289,6 +325,7 @@
       <!-- Rock types entry / completion screen -->
       <div id="rockEntryScreen" class="overlay">
         <div class="panel">
+          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
           <div class="panel-header">
             <button id="rockEntryCloseBtn" class="panel-close" type="button" aria-label="Close">&#x2715;</button>
           </div>
@@ -312,6 +349,7 @@
       <!-- Preferences overlay -->
       <div id="prefsOverlay" class="overlay">
         <div class="panel">
+          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
           <div class="panel-header">
             <button id="prefsCloseBtn" class="panel-close" type="button" aria-label="Close">&#x2715;</button>
           </div>

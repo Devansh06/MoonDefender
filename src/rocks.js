@@ -5,7 +5,7 @@ import { gravityAt, integrateRock, deflectionRange, lineIntersectsEarth } from "
 import { starnetRange, addEarthDamage } from "./world.js";
 import { addBurst, addCometTrail, addStarnetShock } from "./render.js";
 
-export function chooseRockType() {
+function chooseRockType() {
   const r = Math.random();
   if (state.level >= 3 && r < 0.07) return "healing";
   if (state.level >= 2 && r < 0.17) return "comet";
@@ -251,12 +251,20 @@ export function clearRock(rock, destroyed, earthImpact = false) {
       const pts = destroyed ? rock.level * 75 : successfulDeflection ? rock.level * 40 : 0;
       state.score += pts;
       if (destroyed || successfulDeflection) {
-        state.deflectionsCleared += 1;
         state.hitsCleared += 1;
-        if (state.hitsCleared % 5 === 0) state.starnet += 1;
+        if (state.hitsCleared % 4 === 0) state.starnet += 1;
       }
       if (pts > 0 && rock.rockType !== "comet") {
         state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 5, text: `+${pts}`, life: 1.2, maxLife: 1.2, vy: -40, color: destroyed ? "#ffcf70" : "#8ff0b2" });
+      }
+    }
+    if (!state.tutorialMode) {
+      const s = state.rockStats[rock.rockType];
+      if (s) {
+        if (rock.rockType === "healing") { if (destroyed) s.captured += 1; }
+        else if (rock.rockType === "boss") { if (destroyed) s.destroyed += 1; }
+        else if (destroyed) s.destroyed += 1;
+        else if (successfulDeflection) s.deflected += 1;
       }
     }
   }
@@ -264,8 +272,9 @@ export function clearRock(rock, destroyed, earthImpact = false) {
 }
 
 export function markArenaState(rock) {
-  const margin = rock.r * 2;
-  if (rock.x > -margin && rock.x < state.w + margin && rock.y > -margin && rock.y < state.h + margin) {
+  const hm = rock.r * 2;
+  if (rock.x > state.arenaLeft - hm && rock.x < state.arenaRight + hm &&
+      rock.y > -hm && rock.y < state.h + hm) {
     rock.enteredArena = true;
   }
 }
@@ -436,7 +445,7 @@ export function hitRock(rock, projectile) {
   rock.cleared = true;
 }
 
-export function splitRock(rock, pieces, newLevel, projectile, impulse) {
+function splitRock(rock, pieces, newLevel, projectile, impulse) {
   const splitPts = 30 * rock.level;
   state.score += splitPts;
   state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 5, text: `+${splitPts}`, life: 1.2, maxLife: 1.2, vy: -40, color: "#ffcf70" });
@@ -534,7 +543,7 @@ export function destroyWithStarnet(rock) {
   clearRock(rock, true);
 }
 
-export function captureHealingRock(rock) {
+function captureHealingRock(rock) {
   const healed = state.damage * 0.33;
   state.damage = Math.max(0, state.damage - healed);
   rock.cleared = true;
@@ -543,7 +552,7 @@ export function captureHealingRock(rock) {
   state.hazardBanner = { text: `Healing Rock captured! Earth healed 33%`, timeLeft: 2.5 };
 }
 
-export function deflectWithStarnet(rock, distanceFromEarth) {
+function deflectWithStarnet(rock, distanceFromEarth) {
   const uncracked = (rock.rockType === "armored" || rock.rockType === "boss") && !rock.cracked;
   if (uncracked) {
     if (!rock.starnetHit) {

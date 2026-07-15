@@ -62,8 +62,4 @@ export const missionControl = {
     els.mcBubble?.classList.add("mc-hidden");
   },
 
-  setIcon(svgString) {
-    const icon = els.mcBubble?.querySelector(".mc-icon");
-    if (icon) icon.outerHTML = svgString;
-  },
 };

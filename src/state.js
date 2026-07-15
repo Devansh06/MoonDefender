@@ -4,7 +4,6 @@ export const els = {
   level:             document.getElementById("level"),
   timer:             document.getElementById("timer"),
   score:             document.getElementById("score"),
-  lostCountry:       document.getElementById("lostCountry"),
   exitBtn:           document.getElementById("exitBtn"),
   pauseBtn:          document.getElementById("pauseBtn"),
   deflectorBtn:      document.getElementById("deflectorBtn"),
@@ -12,8 +11,6 @@ export const els = {
   starnetBtn:        document.getElementById("starnetBtn"),
   friendlyFireBtn:   document.getElementById("friendlyFireBtn"),
   friendlyFireState: document.getElementById("friendlyFireState"),
-  blasterCooldown:   document.getElementById("blasterCooldown"),
-  starnetCount:      document.getElementById("starnetCount"),
   overlay:           document.getElementById("overlay"),
   startBtn:          document.getElementById("startBtn"),
   tutorialBtn:       document.getElementById("tutorialBtn"),
@@ -33,7 +30,6 @@ export const els = {
   rockEntryScreen:     document.getElementById("rockEntryScreen"),
   rockEntryCloseBtn:   document.getElementById("rockEntryCloseBtn"),
   rockEntryBackBtn:    document.getElementById("rockEntryBackBtn"),
-  speedBtn:          document.getElementById("speedBtn"),
   fullscreenBtn:     document.getElementById("fullscreenBtn"),
   fullscreenHudBtn:  document.getElementById("fullscreenHudBtn"),
   autoModeBtn:       document.getElementById("autoModeBtn"),
@@ -64,7 +60,7 @@ export const state = {
   // game progress
   level: 1, levelClock: LEVEL_TIME,
   spawnClock: 0, damage: 0, score: 0,
-  deflectionsCleared: 0, hitsCleared: 0, starnet: 2,
+  hitsCleared: 0, starnet: 2,
   blasterCooldown: 0, earthSpin: 0, shake: 0,
   // collections
   projectiles: [], rocks: [], particles: [],
@@ -76,8 +72,8 @@ export const state = {
   moonLaserClock: 0,
   // damage tracking
   nextDamageStarnet: 10,
-  lostCountry: "None", burnSites: [],
-  lostCountries: new Set(),
+  burnSites: [],
+  impactLog: [],
   impactMemory: [],
   // weapons
   selectedWeapon: "deflector", friendlyFire: false,
@@ -96,8 +92,21 @@ export const state = {
   playerIP: "",
   // auto-attack
   autoAttackMode: AUTO_ATTACK_MODES[0],
+  // accuracy tracking
+  totalShots: 0, missedShots: 0,
+  rockStats: {
+    normal:   { destroyed: 0, deflected: 0 },
+    comet:    { destroyed: 0, deflected: 0 },
+    armored:  { destroyed: 0, deflected: 0 },
+    magnetic: { destroyed: 0, deflected: 0 },
+    healing:  { captured: 0 },
+    boss:     { destroyed: 0 },
+  },
+  // arena bounds (set by resize)
+  arenaLeft: 0, arenaRight: 0,
+  // hazard schedule (set by buildHazardSchedule at game start)
+  hazardSchedule: [],
   // preferences (persist across resets)
   satelliteOffset: Math.PI,
-  gameSpeed: 1,
   paused: false,
 };

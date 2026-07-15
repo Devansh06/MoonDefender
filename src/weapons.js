@@ -3,10 +3,10 @@ import { clamp, norm } from "./utils.js";
 import { els, state } from "./state.js";
 import { lineIntersectsEarth, moonBlockedForTarget, closestPointOnSegment, laserScreenEdge } from "./physics.js";
 import { starnetRange, addEarthDamage } from "./world.js";
-import { hitRock, clearRock, destroyWithStarnet, applyStarnetField } from "./rocks.js";
+import { hitRock, clearRock, destroyWithStarnet } from "./rocks.js";
 import { addBurst } from "./render.js";
 
-export function rockThreatScore(rock) {
+function rockThreatScore(rock) {
   const d = Math.hypot(rock.x - state.earth.x, rock.y - state.earth.y);
   const proximityDanger = Math.max(0, 1 - d / (state.earth.r * 3.5)) * 50;
   const dmg = (ROCK_DAMAGE[Math.min(rock.level, 5)] / 35) * 25;
@@ -27,6 +27,7 @@ export function shoot(targetX, targetY) {
 
   const { type, origin } = shot;
   const dir = norm(targetX - origin.x, targetY - origin.y);
+  if (!state.tutorialMode) state.totalShots += 1;
   state.projectiles.push({
     x: origin.x + dir.x * (origin.r + 4),
     y: origin.y + dir.y * (origin.r + 4),
@@ -35,11 +36,12 @@ export function shoot(targetX, targetY) {
     r: 4,
     type,
     life: 1.9,
+    hit: false,
   });
   if (type === "deflector") state.moonPulse = 0.4;
 }
 
-export function chooseShot(targetX, targetY) {
+function chooseShot(targetX, targetY) {
   const moonBlocked = moonBlockedForTarget(targetX, targetY) || lineIntersectsEarth(state.moon, targetX, targetY, state.earth.r * 0.92);
   const blasterLocked = Boolean(els.blasterBtn?.dataset.tutLocked);
   const deflectorLocked = Boolean(els.deflectorBtn?.dataset.tutLocked);
@@ -59,10 +61,14 @@ export function fireLaser(targetX, targetY) {
   const start = { x: state.satellite.x, y: state.satellite.y };
   const dir = norm(targetX - start.x, targetY - start.y);
   const edgeEnd = laserScreenEdge(start, dir.x, dir.y);
-  const hit = findLaserHit(start, edgeEnd);
-  const laserEnd = hit ? hit.point : edgeEnd;
-  state.lasers.push({ x1: start.x, y1: start.y, x2: laserEnd.x, y2: laserEnd.y, life: 0.16, maxLife: 0.16 });
-  if (hit) {
+  const hits = findAllLaserHits(start, edgeEnd);
+  state.lasers.push({ x1: start.x, y1: start.y, x2: edgeEnd.x, y2: edgeEnd.y, life: 0.16, maxLife: 0.16 });
+  if (!state.tutorialMode) {
+    state.totalShots += 1;
+    if (!hits.length) state.missedShots += 1;
+  }
+  for (const hit of hits) {
+    if (hit.rock.cleared) continue;
     hitRock(hit.rock, {
       x: hit.point.x - dir.x * 12,
       y: hit.point.y - dir.y * 12,
@@ -70,22 +76,21 @@ export function fireLaser(targetX, targetY) {
       vy: dir.y * 920,
       type: "blaster",
     });
-  } else if (state.friendlyFire) {
+  }
+  if (!hits.length && state.friendlyFire) {
     const earthHit = lineIntersectsEarth(start, edgeEnd.x, edgeEnd.y, state.earth.r);
     if (earthHit) addEarthDamage(3, earthHit);
   }
 }
 
-export function findLaserHit(start, target) {
-  let best = null;
+function findAllLaserHits(start, target) {
+  const hits = [];
   for (const rock of state.rocks) {
     if (rock.cleared) continue;
     const hit = closestPointOnSegment(start, target, rock);
-    if (hit.distance <= rock.r * 1.38 && (!best || hit.t < best.t)) {
-      best = { rock, point: hit.point, t: hit.t };
-    }
+    if (hit.distance <= rock.r * 1.38) hits.push({ rock, point: hit.point, t: hit.t });
   }
-  return best;
+  return hits.sort((a, b) => a.t - b.t);
 }
 
 export function applyBlasterHoming(projectile, dt) {

@@ -53,7 +53,7 @@ export function isMySub(playerName, score, level) {
 export async function fetchLeaderboard() {
   if (!isEnabled()) return [];
   try {
-    const url = `${SUPABASE_URL}/rest/v1/${TABLE}?select=player_name,score,level&order=score.desc&limit=${TOP_N}`;
+    const url = `${SUPABASE_URL}/rest/v1/${TABLE}?select=player_name,score,level,accuracy&order=score.desc&limit=${TOP_N}`;
     const res = await fetch(url, { headers: apiHeaders() });
     return res.ok ? await res.json() : [];
   } catch {
@@ -61,17 +61,38 @@ export async function fetchLeaderboard() {
   }
 }
 
-// ── Score submission (via stored procedure for safe max-2 enforcement) ─
-export async function submitScore(name, score, level, ip) {
-  if (!isEnabled() || !name || score <= 0) return;
+// ── Name availability check ───────────────────────────────────────────
+export async function checkNameAvailable(name, ip) {
+  if (!isEnabled() || !ip || ip === "unknown") return true;
   try {
-    await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_score`, {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/check_name`, {
       method:  "POST",
-      headers: { ...apiHeaders(), "Prefer": "return=minimal" },
-      body:    JSON.stringify({ p_name: name, p_ip: ip, p_score: score, p_level: level }),
+      headers: apiHeaders(),
+      body:    JSON.stringify({ p_name: name.trim(), p_ip: ip }),
     });
-    recordLocalSub(name, score, level);
+    if (!res.ok) return true;
+    const json = await res.json();
+    return json.available !== false;
+  } catch {
+    return true;
+  }
+}
+
+// ── Score submission (via stored procedure, max-3 per name, name tied to IP) ─
+export async function submitScore(name, score, level, ip, accuracy = 100) {
+  if (!isEnabled() || !name || score <= 0) return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_score`, {
+      method:  "POST",
+      headers: apiHeaders(),
+      body:    JSON.stringify({ p_name: name, p_ip: ip, p_score: score, p_level: level, p_accuracy: accuracy }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (json && json.inserted) recordLocalSub(name, score, level);
+    return json;
   } catch (e) {
     console.warn("Score submit failed:", e);
+    return null;
   }
 }

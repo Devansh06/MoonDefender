@@ -7,8 +7,9 @@
 export const SUPABASE_URL = "https://gnijgvmzwghbtihlgaae.supabase.co";
 export const SUPABASE_ANON_KEY = "sb_publishable_BeaUuXeg72X4GUDzQTc_CA_GHeInj1t";
 
-/*  ── Run once in Supabase SQL Editor ──────────────────────────────────
+/*  ── Run in Supabase SQL Editor to create/update the schema ──────────
 
+-- Table (run once on first setup)
 create table if not exists leaderboard (
   id          uuid default gen_random_uuid() primary key,
   player_name text not null,
@@ -17,36 +18,50 @@ create table if not exists leaderboard (
   level       integer not null default 1,
   created_at  timestamptz default now()
 );
-
 alter table leaderboard enable row level security;
 create policy "Public read" on leaderboard for select using (true);
 
+-- Add accuracy column (run once on existing tables)
+alter table leaderboard add column if not exists accuracy integer not null default 0;
+
+-- submit_score: 1 score per name (personal best only); name is tied to the first IP that used it
 create or replace function submit_score(
-  p_name text, p_ip text, p_score integer, p_level integer
+  p_name text, p_ip text, p_score integer, p_level integer, p_accuracy integer default 0
 ) returns json language plpgsql security definer as $$
 declare
-  v_count     integer;
-  v_min_score integer;
-  v_min_id    uuid;
+  v_owner_ip  text;
+  v_max_score integer;
 begin
-  select count(*) into v_count
-    from leaderboard where ip_address = p_ip;
-
-  if v_count >= 2 then
-    select min(score) into v_min_score
-      from leaderboard where ip_address = p_ip;
-    if p_score <= v_min_score then
-      return '{"inserted":false}'::json;
-    end if;
-    select id into v_min_id
-      from leaderboard where ip_address = p_ip order by score asc limit 1;
-    delete from leaderboard where id = v_min_id;
+  select ip_address into v_owner_ip
+    from leaderboard where player_name = p_name limit 1;
+  if v_owner_ip is not null and v_owner_ip <> p_ip then
+    return '{"inserted":false,"reason":"name_taken"}'::json;
   end if;
-
-  insert into leaderboard(player_name, ip_address, score, level)
-    values (p_name, p_ip, p_score, p_level);
-
+  select max(score) into v_max_score
+    from leaderboard where player_name = p_name;
+  if v_max_score is not null and p_score <= v_max_score then
+    return '{"inserted":false,"reason":"not_beaten"}'::json;
+  end if;
+  delete from leaderboard where player_name = p_name;
+  insert into leaderboard(player_name, ip_address, score, level, accuracy)
+    values (p_name, p_ip, p_score, p_level, p_accuracy);
   return '{"inserted":true}'::json;
+end;
+$$;
+
+-- check_name: returns {"available":true/false} for a given name+IP pair
+create or replace function check_name(
+  p_name text, p_ip text
+) returns json language plpgsql security definer as $$
+declare
+  v_owner_ip text;
+begin
+  select ip_address into v_owner_ip
+    from leaderboard where player_name = p_name limit 1;
+  if v_owner_ip is null or v_owner_ip = p_ip then
+    return '{"available":true}'::json;
+  end if;
+  return '{"available":false}'::json;
 end;
 $$;
 

@@ -1,4 +1,4 @@
-import { TAU, MAGNETIC_PULL_RADIUS, ROCK_DAMAGE, TOTAL_LEVELS } from "./constants.js";
+import { TAU, MAGNETIC_PULL_RADIUS, BLASTER_REFILL } from "./constants.js";
 import { clamp, rand } from "./utils.js";
 import { ctx, state } from "./state.js";
 import { geoToScreen, normalizeLon, starnetRange } from "./world.js";
@@ -48,12 +48,12 @@ export function draw() {
   ctx.save();
   ctx.translate(sx, sy);
   drawSpace();
-  drawOrbits();
   drawStarnetRangeRing();
   drawPaths();
   drawEarth();
   drawHealthRing();
   drawBurnSites();
+  drawStarnetBadge();
   drawSatellite();
   drawMoon();
   drawRocks();
@@ -105,34 +105,34 @@ function drawSpace() {
   ctx.globalAlpha = 1;
 }
 
-function drawOrbits() {
-  ctx.strokeStyle = "rgba(255,255,255,0.10)";
-  ctx.lineWidth = 1;
-  ctx.setLineDash([5, 8]);
+function drawStarnetRangeRing() {
+  const radius = starnetRange();
+  const active = state.starnetRingLife > 0;
+
+  if (active) {
+    const t = clamp(state.starnetRingLife / 2, 0, 1);
+    ctx.save();
+    ctx.globalAlpha = 0.10 + t * 0.42;
+    ctx.shadowColor = "#72e6ff";
+    ctx.shadowBlur = 28;
+    ctx.strokeStyle = "#72e6ff";
+    ctx.lineWidth = 10;
+    ctx.beginPath();
+    ctx.arc(state.earth.x, state.earth.y, radius, 0, TAU);
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+    return;
+  }
+
+  ctx.save();
+  ctx.setLineDash([6, 10]);
+  ctx.strokeStyle = "rgba(114,230,255,0.22)";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.arc(state.earth.x, state.earth.y, state.moon.orbit, 0, TAU);
+  ctx.arc(state.earth.x, state.earth.y, radius, 0, TAU);
   ctx.stroke();
   ctx.setLineDash([]);
-}
-
-function drawStarnetRangeRing() {
-  if (state.starnetRingLife <= 0) return;
-  const t = clamp(state.starnetRingLife / 2, 0, 1);
-  const radius = starnetRange();
-  ctx.save();
-  ctx.globalAlpha = 0.18 + t * 0.72;
-  ctx.shadowColor = "#72e6ff";
-  ctx.shadowBlur = 24;
-  ctx.strokeStyle = "#72e6ff";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.arc(state.earth.x, state.earth.y, radius, 0, TAU);
-  ctx.stroke();
-  ctx.globalAlpha = 0.12 + t * 0.25;
-  ctx.lineWidth = 12;
-  ctx.beginPath();
-  ctx.arc(state.earth.x, state.earth.y, radius, 0, TAU);
-  ctx.stroke();
   ctx.restore();
 }
 
@@ -315,14 +315,6 @@ function drawMoon() {
 
 function drawSatellite() {
   ctx.save();
-  ctx.strokeStyle = state.blasterDisabled ? "rgba(255,80,50,0.25)" : "rgba(255,207,112,0.18)";
-  ctx.lineWidth = 1;
-  ctx.setLineDash([3, 7]);
-  ctx.beginPath();
-  ctx.arc(state.earth.x, state.earth.y, state.satellite.orbit, 0, TAU);
-  ctx.stroke();
-  ctx.setLineDash([]);
-
   ctx.translate(state.satellite.x, state.satellite.y);
   ctx.rotate(state.satellite.angle + Math.PI / 2);
   ctx.shadowColor = state.blasterDisabled ? "#ff5032" : "#ffcf70";
@@ -336,6 +328,31 @@ function drawSatellite() {
   ctx.fillRect(-state.satellite.r * 2.4, -state.satellite.r * 0.35, state.satellite.r * 1.45, state.satellite.r * 0.7);
   ctx.fillRect(state.satellite.r * 0.95, -state.satellite.r * 0.35, state.satellite.r * 1.45, state.satellite.r * 0.7);
   ctx.restore();
+
+  if (!state.blasterDisabled) {
+    const frac = state.blasterCooldown <= 0 ? 1 : 1 - state.blasterCooldown / BLASTER_REFILL;
+    const ringR = state.satellite.r * 2.6;
+    ctx.save();
+    ctx.translate(state.satellite.x, state.satellite.y);
+    ctx.beginPath();
+    ctx.arc(0, 0, ringR, 0, TAU);
+    ctx.strokeStyle = "rgba(255,207,112,0.15)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    if (frac > 0) {
+      const a0 = -Math.PI / 2;
+      ctx.beginPath();
+      ctx.arc(0, 0, ringR, a0, a0 + frac * TAU);
+      ctx.strokeStyle = frac >= 1 ? "rgba(255,207,112,0.92)" : "rgba(255,207,112,0.58)";
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      if (frac >= 1) { ctx.shadowColor = "#ffcf70"; ctx.shadowBlur = 12; }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.lineCap = "butt";
+    }
+    ctx.restore();
+  }
 }
 
 function drawHealthRing() {
@@ -363,6 +380,85 @@ function drawHealthRing() {
     ctx.stroke();
     ctx.shadowBlur = 0;
   }
+  ctx.restore();
+}
+
+function drawStarnetBadge() {
+  if (!state.running) return;
+  const { x, y, r } = state.earth;
+  const count = state.starnet;
+  const has = count > 0;
+  const R = r * 0.28;
+  const clearR = R * 0.42;
+  const color = has ? "#72e6ff" : "rgba(255,80,100,0.6)";
+
+  ctx.save();
+
+  // Dark background
+  ctx.beginPath();
+  ctx.arc(x, y, R, 0, TAU);
+  ctx.fillStyle = "rgba(0,5,15,0.82)";
+  ctx.fill();
+
+  // Cage bars clipped to circle, stopping before centre gap
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(x, y, R, 0, TAU);
+  ctx.clip();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = Math.max(1, R * 0.09);
+  ctx.globalAlpha = 0.65;
+  for (let i = -2; i <= 2; i++) {
+    const off = i * R * 0.5;
+    // vertical segment above centre gap
+    ctx.beginPath();
+    ctx.moveTo(x + off, y - R);
+    ctx.lineTo(x + off, y - clearR);
+    ctx.stroke();
+    // vertical segment below centre gap
+    ctx.beginPath();
+    ctx.moveTo(x + off, y + clearR);
+    ctx.lineTo(x + off, y + R);
+    ctx.stroke();
+    // horizontal segment left of centre gap
+    ctx.beginPath();
+    ctx.moveTo(x - R, y + off);
+    ctx.lineTo(x - clearR, y + off);
+    ctx.stroke();
+    // horizontal segment right of centre gap
+    ctx.beginPath();
+    ctx.moveTo(x + clearR, y + off);
+    ctx.lineTo(x + R, y + off);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Outer cage ring
+  ctx.globalAlpha = 1;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  if (has) { ctx.shadowColor = "#72e6ff"; ctx.shadowBlur = 12; }
+  ctx.beginPath();
+  ctx.arc(x, y, R, 0, TAU);
+  ctx.stroke();
+  ctx.shadowBlur = 0;
+
+  // Dark backdrop for count so it reads cleanly over the bars
+  ctx.beginPath();
+  ctx.arc(x, y, clearR * 0.88, 0, TAU);
+  ctx.fillStyle = "rgba(0,5,15,0.80)";
+  ctx.fill();
+
+  // Count centred inside the cage
+  const fs = Math.round(Math.max(11, R * 0.62));
+  ctx.fillStyle = has ? "#72e6ff" : "rgba(255,100,120,0.80)";
+  if (has) { ctx.shadowColor = "#72e6ff"; ctx.shadowBlur = 8; }
+  ctx.font = `bold ${fs}px sans-serif`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(String(count), x, y + 1);
+  ctx.shadowBlur = 0;
+
   ctx.restore();
 }
 

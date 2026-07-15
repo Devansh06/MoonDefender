@@ -1,8 +1,8 @@
-import { LEVEL_TIME, TOTAL_LEVELS, BOSS_LEVELS, HAZARD_SCHEDULE, AUTO_ATTACK_MODES, AUTO_ATTACK_LABELS, ROCK_DAMAGE } from "./constants.js";
+import { LEVEL_TIME, TOTAL_LEVELS, BOSS_LEVELS, AUTO_ATTACK_MODES, AUTO_ATTACK_LABELS, ROCK_DAMAGE } from "./constants.js";
 import { rand, norm } from "./utils.js";
 import { els, canvas, shell, state } from "./state.js";
-import { isEnabled, getPlayerIP, getStoredName, storeName, fetchLeaderboard, submitScore, isMySub } from "./leaderboard.js";
-import { resize, updateMoon, addEarthDamage } from "./world.js";
+import { isEnabled, getPlayerIP, getStoredName, storeName, fetchLeaderboard, submitScore, isMySub, checkNameAvailable } from "./leaderboard.js";
+import { resize, updateMoon, addEarthDamage, earthTexture } from "./world.js";
 import { resolveRockCollisions, integrateRock } from "./physics.js";
 import { spawnRock, spawnBoss, markArenaState, isOutsideArena, bounceFromMoon, clearRock, applyMagneticPull, applyStarnetField, hitRock, predictPath, updateCatastropheCompanions, spawnMagneticCompanions } from "./rocks.js";
 import { activateHazardEvent, deactivateHazardEvent } from "./hazards.js";
@@ -12,13 +12,23 @@ import { updateHud, selectWeapon, lockWeapon, unlockWeapon, lockAllWeapons } fro
 import { tutorialTick, startCombat, startRockTypes, tutEndStartMission, tutEndBackToTutorials, isInActiveTutorial, exitActiveTutorial } from "./tutorial.js";
 import { missionControl } from "./mission-control.js";
 
+function buildHazardSchedule() {
+  const pool = ["meteor", "solar", "moon", "gravity", "meteor", "moon", "solar"];
+  for (let i = pool.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  // levels 1-2: no hazard, levels 3-9: one each (randomised), level 10: no hazard
+  return [null, null, ...pool, null];
+}
+
 export function resetGame() {
   state.level = 1;
   state.levelClock = LEVEL_TIME;
-  state.spawnClock = 1.1;
+  state.hazardSchedule = buildHazardSchedule();
+  state.spawnClock = 2.5;
   state.damage = 0;
   state.score = 0;
-  state.deflectionsCleared = 0;
   state.hitsCleared = 0;
   state.starnet = 2;
   state.blasterCooldown = 0;
@@ -34,10 +44,19 @@ export function resetGame() {
   state.starnetRingLife = 0;
   state.starnetActivationId = 0;
   state.nextDamageStarnet = 10;
-  state.lostCountry = "None";
   state.burnSites = [];
-  state.lostCountries = new Set();
+  state.impactLog = [];
   state.friendlyFire = false;
+  state.totalShots = 0;
+  state.missedShots = 0;
+  state.rockStats = {
+    normal:   { destroyed: 0, deflected: 0 },
+    comet:    { destroyed: 0, deflected: 0 },
+    armored:  { destroyed: 0, deflected: 0 },
+    magnetic: { destroyed: 0, deflected: 0 },
+    healing:  { captured: 0 },
+    boss:     { destroyed: 0 },
+  };
   state.impactMemory.length = 0;
   state.moonPulse = 0;
   state.moonShieldLife = 0;
@@ -60,16 +79,12 @@ export function resetGame() {
   els.tutorialSelectOverlay.classList.remove("show");
   els.tutEndScreen?.classList.remove("show");
   els.rockEntryScreen?.classList.remove("show");
+  document.getElementById("endScreen")?.classList.remove("show");
   els.overlay.classList.remove("show");
-  for (let i = 0; i < 3; i += 1) spawnRock();
 }
 
 export function pauseNormalSpawning() {
   state.spawnClock = 999999;
-}
-
-export function resumeNormalSpawning() {
-  state.spawnClock = 0;
 }
 
 export function setTutorialMode(on) {
@@ -132,7 +147,7 @@ export function spawnScriptedRock(type, angleOverride, slow = false) {
   if (type === "magnetic" && !state.tutorialMode) spawnMagneticCompanions(rock);
 }
 
-export function nextLevel() {
+function nextLevel() {
   if (state.level >= TOTAL_LEVELS) {
     endGame("All 10 levels cleared. Earth survives.");
     return;
@@ -141,7 +156,7 @@ export function nextLevel() {
   state.levelClock = LEVEL_TIME;
   deactivateHazardEvent();
 
-  const hazardType = HAZARD_SCHEDULE[state.level - 1];
+  const hazardType = state.hazardSchedule[state.level - 1];
   if (hazardType) activateHazardEvent(hazardType);
 
   if (BOSS_LEVELS.has(state.level)) {
@@ -155,24 +170,134 @@ export function nextLevel() {
   }
 }
 
-export function endGame(message) {
+let endLbRows = null;
+
+const COUNTRY_CENTROIDS = {
+  "United States":         [37,  -98],
+  "Canada":                [61,  -96],
+  "Mexico":                [23, -102],
+  "Brazil":                [-10, -53],
+  "Argentina":             [-38, -63],
+  "United Kingdom":        [54,   -2],
+  "France":                [46,    2],
+  "Spain":                 [40,   -4],
+  "Germany":               [51,   10],
+  "Italy":                 [43,   12],
+  "Russia":                [62,  100],
+  "Turkey":                [39,   35],
+  "Egypt":                 [27,   30],
+  "Nigeria":               [9,     8],
+  "South Africa":          [-29,  25],
+  "Saudi Arabia":          [24,   45],
+  "India":                 [21,   78],
+  "China":                 [35,  105],
+  "Japan":                 [38,  138],
+  "Indonesia":             [-2,  118],
+  "Australia":             [-27, 133],
+  "Arctic sector":         [80,    0],
+  "Antarctic sector":      [-80,   0],
+  "Atlantic Ocean sector": [0,   -30],
+  "Indian Ocean sector":   [0,    75],
+  "Pacific Ocean sector":  [0,  -150],
+};
+
+function drawWorldMap() {
+  const mapCanvas = document.getElementById("worldMapCanvas");
+  if (!mapCanvas) return;
+  const W = mapCanvas.width;
+  const H = mapCanvas.height;
+  const mCtx = mapCanvas.getContext("2d");
+
+  mCtx.fillStyle = "#07111f";
+  mCtx.fillRect(0, 0, W, H);
+
+  if (earthTexture.complete && earthTexture.naturalWidth) {
+    mCtx.drawImage(earthTexture, 0, 0, W, H);
+    mCtx.fillStyle = "rgba(0,0,0,0.38)";
+    mCtx.fillRect(0, 0, W, H);
+  }
+
+  const hitCounts = {};
+  for (const e of state.impactLog) {
+    hitCounts[e.country] = (hitCounts[e.country] || 0) + 1;
+  }
+
+  for (const [country, count] of Object.entries(hitCounts)) {
+    const centroid = COUNTRY_CENTROIDS[country];
+    if (!centroid) continue;
+    const [lat, lon] = centroid;
+    const x = ((lon + 180) / 360) * W;
+    const y = ((90 - lat) / 180) * H;
+
+    const r = Math.min(4 + count * 1.5, 9);
+    mCtx.beginPath();
+    mCtx.arc(x, y, r, 0, Math.PI * 2);
+    mCtx.fillStyle = count > 2 ? "#ff2020" : "#ff6060";
+    mCtx.fill();
+    mCtx.strokeStyle = "rgba(255,220,200,0.9)";
+    mCtx.lineWidth = 1;
+    mCtx.stroke();
+
+    const label = country.replace(" Ocean sector", "").replace(" sector", "");
+    mCtx.font = "bold 8px sans-serif";
+    mCtx.lineWidth = 2.5;
+    mCtx.strokeStyle = "rgba(0,0,0,0.85)";
+    mCtx.strokeText(label, x + r + 3, y + 3);
+    mCtx.fillStyle = "#fff";
+    mCtx.fillText(label, x + r + 3, y + 3);
+  }
+
+  if (!Object.keys(hitCounts).length) {
+    mCtx.font = "11px sans-serif";
+    mCtx.fillStyle = "rgba(180,200,220,0.4)";
+    mCtx.textAlign = "center";
+    mCtx.fillText("No impact zones recorded", W / 2, H / 2);
+    mCtx.textAlign = "left";
+  }
+}
+
+function endGame(message) {
   state.running = false;
   deactivateHazardEvent();
   state.bossActive = false;
-  els.overlay.querySelector("h1").textContent = state.damage >= 100 ? "Earth Lost" : "Mission Report";
-  els.overlay.querySelector("p").textContent = `${message} Score: ${state.score}.`;
-  els.startBtn.textContent = "Restart Mission";
+
+  const accuracy = state.totalShots > 0
+    ? Math.round(100 * (state.totalShots - state.missedShots) / state.totalShots)
+    : 100;
+
+  const typeLabels = { normal: "Normal", comet: "Comet", armored: "Armored", magnetic: "Magnetic", healing: "Healing", boss: "Catastrophe" };
+  document.getElementById("endTitle").textContent = state.damage >= 100 ? "Earth Lost" : "Mission Complete";
+  document.getElementById("endMsg").textContent = message;
+  document.getElementById("endScore").textContent = `Score: ${state.score.toLocaleString()}`;
+  document.getElementById("endAccuracy").textContent = `${accuracy}%`;
+  document.getElementById("statsRockBody").innerHTML = Object.entries(state.rockStats).map(([type, s]) => {
+    if (type === "healing") return `<tr><td>${typeLabels[type]}</td><td colspan="2" style="text-align:center">${s.captured} captured</td></tr>`;
+    if (type === "boss")    return `<tr><td>${typeLabels[type]}</td><td colspan="2" style="text-align:center">${s.destroyed} defeated</td></tr>`;
+    return `<tr><td>${typeLabels[type]}</td><td>${s.destroyed}</td><td>${s.deflected}</td></tr>`;
+  }).join("");
+  drawWorldMap();
+
+  endLbRows = null;
+  document.getElementById("endLeaderboard").style.display = "none";
+  document.getElementById("endLbList").innerHTML = '<div class="lb-loading">Loading…</div>';
+
   els.tutorialOverlay.classList.remove("show");
-  els.overlay.classList.add("show");
+  document.getElementById("endScreen").classList.add("show");
 
   const score = state.score;
   const level = state.level;
   const name  = state.playerName;
   const ip    = state.playerIP;
+  const doFetch = async () => {
+    endLbRows = await fetchLeaderboard();
+    if (document.getElementById("endLeaderboard").style.display !== "none") {
+      renderLbRows(endLbRows, document.getElementById("endLbList"));
+    }
+  };
   if (name && name !== "Guest" && score > 0) {
-    submitScore(name, score, level, ip).then(() => loadLeaderboard());
+    submitScore(name, score, level, ip, accuracy).then(doFetch);
   } else {
-    loadLeaderboard();
+    doFetch();
   }
 }
 
@@ -244,11 +369,13 @@ function update(dt) {
 
     if (Math.hypot(rock.x - state.earth.x, rock.y - state.earth.y) < state.earth.r + rock.r * 0.45) {
       if (rock.rockType === "boss") {
-        addEarthDamage(50, rock);
+        const bossDmg = rock.cracked ? 25 : 50;
+        addEarthDamage(bossDmg, rock);
         state.bossActive = false;
-        state.floatingTexts.push({ x: rock.x, y: rock.y - 10, text: "-50 HP", life: 1.6, maxLife: 1.6, vy: -45, color: "#cc44ff" });
+        state.floatingTexts.push({ x: rock.x, y: rock.y - 10, text: `-${bossDmg} HP`, life: 1.6, maxLife: 1.6, vy: -45, color: "#cc44ff" });
       } else if (rock.rockType !== "healing") {
-        const dmg = ROCK_DAMAGE[rock.level];
+        const baseDmg = ROCK_DAMAGE[rock.level];
+        const dmg = (rock.rockType === "armored" && rock.cracked) ? Math.ceil(baseDmg * 0.5) : baseDmg;
         addEarthDamage(dmg, rock);
         const impactColor = { comet: "#88eeff", armored: "#c8c8b4", magnetic: "#c070ff" }[rock.rockType] || "#ff8866";
         state.floatingTexts.push({ x: rock.x, y: rock.y - 10, text: `-${dmg} HP`, life: 1.4, maxLife: 1.4, vy: -40, color: impactColor });
@@ -277,6 +404,7 @@ function update(dt) {
           addBurst(rock.x, rock.y, "#b060ff", 12);
         } else {
           hitRock(rock, projectile);
+          projectile.hit = true;
           projectile.life = -1;
         }
         break;
@@ -296,6 +424,9 @@ function update(dt) {
   for (const ft of state.floatingTexts) { ft.y += ft.vy * dt; ft.life -= dt; }
   state.floatingTexts = state.floatingTexts.filter(ft => ft.life > 0);
 
+  for (const p of state.projectiles) {
+    if (p.life <= 0 && !p.hit && !state.tutorialMode) state.missedShots += 1;
+  }
   state.projectiles = state.projectiles.filter((p) => p.life > 0 && p.x > -80 && p.x < state.w + 80 && p.y > -80 && p.y < state.h + 80);
   state.rocks = state.rocks.filter((r) => !r.cleared && r.x > -state.w && r.x < state.w * 2 && r.y > -state.h && r.y < state.h * 2);
   state.particles = state.particles.filter((p) => p.life > 0);
@@ -320,15 +451,8 @@ function togglePause() {
   els.pauseBtn.classList.toggle("is-paused", state.paused);
 }
 
-function cycleSpeed() {
-  const speeds = [1, 1.5, 2];
-  state.gameSpeed = speeds[(speeds.indexOf(state.gameSpeed) + 1) % speeds.length];
-  els.speedBtn.textContent = `${state.gameSpeed}×`;
-  els.speedBtn.classList.toggle("speed-fast", state.gameSpeed > 1);
-}
-
 function frame(now) {
-  const dt = Math.min(0.033, (now - state.lastTime) / 1000 || 0) * state.gameSpeed;
+  const dt = Math.min(0.033, (now - state.lastTime) / 1000 || 0);
   state.lastTime = now;
   if (!state.paused) update(dt);
   draw();
@@ -341,15 +465,24 @@ function toggleFullscreen() {
   else document.exitFullscreen().catch(() => {});
 }
 
+const FS_EXPAND = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>`;
+const FS_COMPRESS = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>`;
+
 function updateFullscreenIcons() {
-  const icon = document.fullscreenElement ? "✕" : "⛶";
-  if (els.fullscreenBtn)    els.fullscreenBtn.textContent = icon;
-  if (els.fullscreenHudBtn) els.fullscreenHudBtn.textContent = icon;
+  const icon = document.fullscreenElement ? FS_COMPRESS : FS_EXPAND;
+  if (els.fullscreenHudBtn) els.fullscreenHudBtn.innerHTML = icon;
+  document.querySelectorAll(".panel-fs-btn").forEach(btn => { btn.innerHTML = icon; });
 }
 
 window.addEventListener("resize", resize);
 shell.addEventListener("pointerdown", (event) => {
-  if (event.target.closest("button") || els.overlay.classList.contains("show")) return;
+  if (event.target.closest("button") || els.overlay.classList.contains("show") || document.getElementById("endScreen")?.classList.contains("show")) return;
+  const dx = event.clientX - state.earth.x;
+  const dy = event.clientY - state.earth.y;
+  if (Math.hypot(dx, dy) < state.earth.r && state.running && !state.paused) {
+    if (!els.starnetBtn.dataset.tutLocked) useStarnet();
+    return;
+  }
   shoot(event.clientX, event.clientY);
 });
 els.exitBtn.addEventListener("click", () => {
@@ -442,9 +575,8 @@ document.querySelectorAll(".sat-btn").forEach(btn => {
     btn.classList.add("active");
   });
 });
-els.speedBtn.addEventListener("click", cycleSpeed);
-els.fullscreenBtn.addEventListener("click",    toggleFullscreen);
 els.fullscreenHudBtn.addEventListener("click", toggleFullscreen);
+document.querySelectorAll(".panel-fs-btn").forEach(btn => btn.addEventListener("click", toggleFullscreen));
 function cycleAutoMode() {
   const idx = AUTO_ATTACK_MODES.indexOf(state.autoAttackMode);
   state.autoAttackMode = AUTO_ATTACK_MODES[(idx + 1) % AUTO_ATTACK_MODES.length];
@@ -464,7 +596,6 @@ window.addEventListener("keydown", (event) => {
   if (event.key === "3" || event.key.toLowerCase() === "s" || event.code === "Numpad3") {
     if (!els.starnetBtn.dataset.tutLocked) useStarnet();
   }
-  if (event.key === "=" || event.key === "+") cycleSpeed();
   if (event.key.toLowerCase() === "p" || event.key === "Escape") { event.preventDefault(); togglePause(); }
   if (event.code === "Space") {
     event.preventDefault();
@@ -484,11 +615,33 @@ els.friendlyFireBtn.classList.toggle("on",  state.friendlyFire);
 els.friendlyFireBtn.classList.toggle("off", !state.friendlyFire);
 resize();
 updateMoon(0);
+updateFullscreenIcons();
 requestAnimationFrame(frame);
 
 // ── Leaderboard helpers ───────────────────────────────────────────────
 function escHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function renderLbRows(rows, listEl) {
+  if (!listEl) return;
+  if (!rows || !rows.length) {
+    listEl.innerHTML = '<div class="lb-empty">No scores yet — be the first!</div>';
+    return;
+  }
+  const medals = ["#1", "#2", "#3"];
+  listEl.innerHTML = rows.map((row, i) => {
+    const mine = isMySub(row.player_name, row.score, row.level);
+    const rank = i < 3 ? `<span class="lb-medal lb-medal-${i+1}">${medals[i]}</span>` : `<span>${i + 1}</span>`;
+    const acc  = row.accuracy != null ? `${row.accuracy}%` : "—";
+    return `<div class="lb-row${mine ? " lb-mine" : ""}">
+      <span class="lb-rank">${rank}</span>
+      <span class="lb-name">${escHtml(row.player_name)}</span>
+      <span class="lb-score">${row.score.toLocaleString()}</span>
+      <span class="lb-level">Lv&nbsp;${row.level}</span>
+      <span class="lb-acc">${acc}</span>
+    </div>`;
+  }).join("");
 }
 
 async function loadLeaderboard() {
@@ -504,24 +657,31 @@ async function loadLeaderboard() {
   if (statusEl) statusEl.textContent = "Loading…";
   const rows = await fetchLeaderboard();
   if (statusEl) statusEl.textContent = "";
-
-  if (!rows.length) {
-    listEl.innerHTML = '<div class="lb-empty">No scores yet — be the first!</div>';
-    return;
-  }
-
-  listEl.innerHTML = rows.map((row, i) => {
-    const mine   = isMySub(row.player_name, row.score, row.level);
-    const medals = ["#1", "#2", "#3"];
-    const rank   = i < 3 ? `<span class="lb-medal lb-medal-${i+1}">${medals[i]}</span>` : `<span>${i + 1}</span>`;
-    return `<div class="lb-row${mine ? " lb-mine" : ""}">
-      <span class="lb-rank">${rank}</span>
-      <span class="lb-name">${escHtml(row.player_name)}</span>
-      <span class="lb-score">${row.score.toLocaleString()}</span>
-      <span class="lb-level">Lv&nbsp;${row.level}</span>
-    </div>`;
-  }).join("");
+  renderLbRows(rows, listEl);
 }
+
+// ── End-screen buttons ────────────────────────────────────────────────
+document.getElementById("endRestartBtn")?.addEventListener("click", () => {
+  document.getElementById("endScreen")?.classList.remove("show");
+  resetGame();
+});
+document.getElementById("endMenuBtn")?.addEventListener("click", () => {
+  document.getElementById("endScreen")?.classList.remove("show");
+  els.overlay.classList.add("show");
+  loadLeaderboard();
+});
+document.getElementById("endLbBtn")?.addEventListener("click", () => {
+  const lbEl   = document.getElementById("endLeaderboard");
+  const listEl = document.getElementById("endLbList");
+  if (!lbEl) return;
+  lbEl.style.display = "";
+  if (endLbRows) {
+    renderLbRows(endLbRows, listEl);
+  } else {
+    listEl.innerHTML = '<div class="lb-loading">Loading…</div>';
+    fetchLeaderboard().then(rows => { endLbRows = rows; renderLbRows(rows, listEl); });
+  }
+});
 
 // ── Name modal ────────────────────────────────────────────────────────
 const nameModal      = document.getElementById("nameModal");
@@ -535,10 +695,24 @@ function applyName(name) {
   if (display) display.textContent = name || "—";
 }
 
-function confirmName() {
+async function confirmName() {
   const name = nameInput?.value.trim();
+  const nameErrorEl = document.getElementById("nameError");
+  if (nameErrorEl) nameErrorEl.style.display = "none";
   if (!name) { nameInput?.classList.add("input-error"); return; }
   nameInput?.classList.remove("input-error");
+
+  if (isEnabled() && state.playerIP && state.playerIP !== "unknown") {
+    if (nameConfirmBtn) nameConfirmBtn.disabled = true;
+    const available = await checkNameAvailable(name, state.playerIP);
+    if (nameConfirmBtn) nameConfirmBtn.disabled = false;
+    if (!available) {
+      if (nameErrorEl) nameErrorEl.style.display = "";
+      nameInput?.classList.add("input-error");
+      return;
+    }
+  }
+
   storeName(name);
   applyName(name);
   nameModal.classList.remove("show");
