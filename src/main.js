@@ -1,6 +1,7 @@
 import { LEVEL_TIME, TOTAL_LEVELS, BOSS_LEVELS, HAZARD_SCHEDULE, AUTO_ATTACK_MODES, AUTO_ATTACK_LABELS, ROCK_DAMAGE } from "./constants.js";
 import { rand, norm } from "./utils.js";
 import { els, canvas, shell, state } from "./state.js";
+import { isEnabled, getPlayerIP, getStoredName, storeName, fetchLeaderboard, submitScore, isMySub } from "./leaderboard.js";
 import { resize, updateMoon, addEarthDamage } from "./world.js";
 import { resolveRockCollisions, integrateRock } from "./physics.js";
 import { spawnRock, spawnBoss, markArenaState, isOutsideArena, bounceFromMoon, clearRock, applyMagneticPull, applyStarnetField, hitRock, predictPath, updateCatastropheCompanions, spawnMagneticCompanions } from "./rocks.js";
@@ -8,9 +9,8 @@ import { activateHazardEvent, deactivateHazardEvent } from "./hazards.js";
 import { shoot, fireLaser, useStarnet, applyBlasterHoming, fireMoonLaser, autoAttack } from "./weapons.js";
 import { draw, addCometTrail, addBurst } from "./render.js";
 import { updateHud, selectWeapon, lockWeapon, unlockWeapon, lockAllWeapons } from "./hud.js";
-import { tutorialTick, startCombat, startRockTypes, tutEndStartMission, tutEndBackToTutorials } from "./tutorial.js";
+import { tutorialTick, startCombat, startRockTypes, tutEndStartMission, tutEndBackToTutorials, isInActiveTutorial, exitActiveTutorial } from "./tutorial.js";
 import { missionControl } from "./mission-control.js";
-import { music } from "./music.js";
 
 export function resetGame() {
   state.level = 1;
@@ -30,6 +30,7 @@ export function resetGame() {
   state.particles = [];
   state.lasers = [];
   state.starnetEffects = [];
+  state.floatingTexts = [];
   state.starnetRingLife = 0;
   state.starnetActivationId = 0;
   state.nextDamageStarnet = 10;
@@ -83,15 +84,33 @@ export function setTutorialMode(on) {
 }
 
 export function spawnScriptedRock(type, angleOverride, slow = false) {
-  const far = Math.max(state.w, state.h) * 0.68 + state.earth.r;
   const angle = angleOverride !== undefined ? angleOverride : Math.random() * Math.PI * 2;
-  const pos = {
-    x: state.earth.x + Math.cos(angle) * far,
-    y: state.earth.y + Math.sin(angle) * far,
-  };
-  const targetAngle = Math.atan2(state.earth.y - pos.y, state.earth.x - pos.x);
-  const speedMult = slow ? 0.45 : 1;
-  const speed = (type === "comet" ? 96 : 64) * speedMult;
+  const side = Math.cos(angle) < 0 ? -1 : 1;
+  const margin = type === "boss" ? state.earth.r * 0.22 : 34;
+  const pos = state.tutorialMode
+    ? {
+        x: side < 0 ? -margin : state.w + margin,
+        y: state.earth.y + Math.sin(angle) * state.earth.r * 1.2,
+      }
+    : (() => {
+        const dir = { x: Math.cos(angle), y: Math.sin(angle) };
+        const candidates = [];
+        if (dir.x > 0) candidates.push((state.w - state.earth.x) / dir.x);
+        if (dir.x < 0) candidates.push((0 - state.earth.x) / dir.x);
+        if (dir.y > 0) candidates.push((state.h - state.earth.y) / dir.y);
+        if (dir.y < 0) candidates.push((0 - state.earth.y) / dir.y);
+        const edgeDistance = Math.min(...candidates.filter(d => d > 0));
+        return {
+          x: state.earth.x + dir.x * (edgeDistance + margin),
+          y: state.earth.y + dir.y * (edgeDistance + margin),
+        };
+      })();
+  const target = state.tutorialMode
+    ? { x: state.earth.x - side * state.earth.r * 0.38, y: state.earth.y + Math.sin(angle) * state.earth.r * 0.24 }
+    : state.earth;
+  const targetAngle = Math.atan2(target.y - pos.y, target.x - pos.x);
+  const speedMult = state.tutorialMode ? (slow ? 0.24 : 0.36) : (slow ? 0.45 : 1);
+  const speed = (type === "comet" ? 140 : 92) * speedMult;
   const r = type === "comet" ? 8 : type === "healing" ? 14 : type === "magnetic" ? 19 : 15;
 
   const rock = {
@@ -110,7 +129,7 @@ export function spawnScriptedRock(type, angleOverride, slow = false) {
     starnetHit: false, lastStarnetDistance: 0,
   };
   state.rocks.push(rock);
-  if (type === "magnetic") spawnMagneticCompanions(rock);
+  if (type === "magnetic" && !state.tutorialMode) spawnMagneticCompanions(rock);
 }
 
 export function nextLevel() {
@@ -145,6 +164,16 @@ export function endGame(message) {
   els.startBtn.textContent = "Restart Mission";
   els.tutorialOverlay.classList.remove("show");
   els.overlay.classList.add("show");
+
+  const score = state.score;
+  const level = state.level;
+  const name  = state.playerName;
+  const ip    = state.playerIP;
+  if (name && name !== "Guest" && score > 0) {
+    submitScore(name, score, level, ip).then(() => loadLeaderboard());
+  } else {
+    loadLeaderboard();
+  }
 }
 
 function update(dt) {
@@ -217,10 +246,14 @@ function update(dt) {
       if (rock.rockType === "boss") {
         addEarthDamage(50, rock);
         state.bossActive = false;
+        state.floatingTexts.push({ x: rock.x, y: rock.y - 10, text: "-50 HP", life: 1.6, maxLife: 1.6, vy: -45, color: "#cc44ff" });
       } else if (rock.rockType !== "healing") {
-        addEarthDamage(ROCK_DAMAGE[rock.level], rock);
+        const dmg = ROCK_DAMAGE[rock.level];
+        addEarthDamage(dmg, rock);
+        const impactColor = { comet: "#88eeff", armored: "#c8c8b4", magnetic: "#c070ff" }[rock.rockType] || "#ff8866";
+        state.floatingTexts.push({ x: rock.x, y: rock.y - 10, text: `-${dmg} HP`, life: 1.4, maxLife: 1.4, vy: -40, color: impactColor });
       }
-      clearRock(rock, true);
+      clearRock(rock, true, true);
     } else if (rock.rockType !== "boss" && Math.hypot(rock.x - state.moon.x, rock.y - state.moon.y) < state.moon.r + rock.r * 0.4) {
       bounceFromMoon(rock);
     } else if (isOutsideArena(rock)) {
@@ -260,6 +293,8 @@ function update(dt) {
   }
   for (const shock of state.starnetEffects) shock.life -= dt;
   for (const laser of state.lasers) laser.life -= dt;
+  for (const ft of state.floatingTexts) { ft.y += ft.vy * dt; ft.life -= dt; }
+  state.floatingTexts = state.floatingTexts.filter(ft => ft.life > 0);
 
   state.projectiles = state.projectiles.filter((p) => p.life > 0 && p.x > -80 && p.x < state.w + 80 && p.y > -80 && p.y < state.h + 80);
   state.rocks = state.rocks.filter((r) => !r.cleared && r.x > -state.w && r.x < state.w * 2 && r.y > -state.h && r.y < state.h * 2);
@@ -313,15 +348,17 @@ function updateFullscreenIcons() {
 }
 
 window.addEventListener("resize", resize);
-let musicStarted = false;
 shell.addEventListener("pointerdown", (event) => {
-  if (!musicStarted) { music.start(); musicStarted = true; }
   if (event.target.closest("button") || els.overlay.classList.contains("show")) return;
   shoot(event.clientX, event.clientY);
 });
 els.exitBtn.addEventListener("click", () => {
   missionControl.silence();
-  if (state.running) endGame("Mission abandoned.");
+  if (isInActiveTutorial()) {
+    exitActiveTutorial();
+  } else if (state.running) {
+    endGame("Mission abandoned.");
+  }
 });
 els.pauseBtn.addEventListener("click", togglePause);
 els.deflectorBtn.addEventListener("click", () => selectWeapon("deflector"));
@@ -335,9 +372,6 @@ els.friendlyFireBtn.addEventListener("click", () => {
   updateHud();
 });
 els.startBtn.addEventListener("click", resetGame);
-document.addEventListener("pointerdown", () => {
-  if (!musicStarted) { music.start(); musicStarted = true; }
-}, { once: true });
 els.panelCloseBtn.addEventListener("click", resetGame);
 els.tutorialBtn.addEventListener("click", () => {
   els.overlay.classList.remove("show");
@@ -359,7 +393,9 @@ els.tutHowToPlayBtn.addEventListener("click", () => {
 });
 
 // Tutorial combat
-els.tutCombatBtn.addEventListener("click", startCombat);
+els.tutCombatBtn.addEventListener("click", () => {
+  startCombat();
+});
 
 // Tutorial end screen
 els.tutEndStartBtn.addEventListener("click", tutEndStartMission);
@@ -384,37 +420,21 @@ els.rockEntryBackBtn.addEventListener("click", () => {
   els.tutorialSelectOverlay.classList.add("show");
 });
 document.querySelectorAll(".rock-entry-btn").forEach(btn => {
-  btn.addEventListener("click", () => startRockTypes(btn.dataset.rock));
+  btn.addEventListener("click", () => {
+    startRockTypes(btn.dataset.rock);
+  });
 });
 els.tutCloseBtn.addEventListener("click",  () => { els.tutorialOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 els.tutBackBtn.addEventListener("click",   () => { els.tutorialOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 els.tutPlayBtn.addEventListener("click",   () => { els.tutorialOverlay.classList.remove("show"); resetGame(); });
-els.prefsBtn.addEventListener("click",      () => { els.overlay.classList.remove("show"); els.prefsOverlay.classList.add("show"); });
+els.prefsBtn.addEventListener("click", () => {
+  const d = document.getElementById("callsignDisplay");
+  if (d) d.textContent = state.playerName || "—";
+  els.overlay.classList.remove("show");
+  els.prefsOverlay.classList.add("show");
+});
 els.prefsCloseBtn.addEventListener("click", () => { els.prefsOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 els.prefsBackBtn.addEventListener("click",  () => { els.prefsOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
-// ElevenLabs API key save
-els.elApiKeySaveBtn.addEventListener("click", () => {
-  const key = els.elApiKeyInput.value.trim();
-  if (key) {
-    localStorage.setItem("mc_el_key", key);
-    els.elApiKeyInput.value = "";
-    els.elApiKeyInput.placeholder = "Key saved ✓";
-    setTimeout(() => { els.elApiKeyInput.placeholder = "Paste API key"; }, 2000);
-  }
-});
-if (localStorage.getItem("mc_el_key")) {
-  els.elApiKeyInput.placeholder = "Key saved ✓";
-}
-// Music mute toggle
-els.musicMuteBtn.addEventListener("click", () => {
-  const nowMuted = music.toggle();
-  els.musicMuteLabel.textContent = nowMuted ? "Off" : "On";
-  els.musicMuteBtn.classList.toggle("off", nowMuted);
-});
-if (music.loadPref()) {
-  els.musicMuteLabel.textContent = "Off";
-  els.musicMuteBtn.classList.add("off");
-}
 document.querySelectorAll(".sat-btn").forEach(btn => {
   btn.addEventListener("click", () => {
     state.satelliteOffset = parseInt(btn.dataset.offset, 10) * Math.PI / 180;
@@ -425,11 +445,15 @@ document.querySelectorAll(".sat-btn").forEach(btn => {
 els.speedBtn.addEventListener("click", cycleSpeed);
 els.fullscreenBtn.addEventListener("click",    toggleFullscreen);
 els.fullscreenHudBtn.addEventListener("click", toggleFullscreen);
-els.autoModeBtn.addEventListener("click", () => {
+function cycleAutoMode() {
   const idx = AUTO_ATTACK_MODES.indexOf(state.autoAttackMode);
   state.autoAttackMode = AUTO_ATTACK_MODES[(idx + 1) % AUTO_ATTACK_MODES.length];
-  els.autoModeLabel.textContent = AUTO_ATTACK_LABELS[state.autoAttackMode];
-});
+  const label = AUTO_ATTACK_LABELS[state.autoAttackMode];
+  els.autoModeLabel.textContent = label;
+  els.targetLabel.textContent = label;
+}
+els.autoModeBtn.addEventListener("click", cycleAutoMode);
+els.targetBtn.addEventListener("click", cycleAutoMode);
 window.addEventListener("keydown", (event) => {
   if (event.key === "1" || event.code === "Numpad1") {
     if (!els.deflectorBtn.dataset.tutLocked) { selectWeapon("deflector"); autoAttack("deflector"); }
@@ -454,9 +478,101 @@ window.addEventListener("keydown", (event) => {
 document.addEventListener("fullscreenchange", updateFullscreenIcons);
 
 els.autoModeLabel.textContent = AUTO_ATTACK_LABELS[state.autoAttackMode];
+els.targetLabel.textContent   = AUTO_ATTACK_LABELS[state.autoAttackMode];
 els.friendlyFireState.textContent = state.friendlyFire ? "On" : "Off";
 els.friendlyFireBtn.classList.toggle("on",  state.friendlyFire);
 els.friendlyFireBtn.classList.toggle("off", !state.friendlyFire);
 resize();
 updateMoon(0);
 requestAnimationFrame(frame);
+
+// ── Leaderboard helpers ───────────────────────────────────────────────
+function escHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+async function loadLeaderboard() {
+  const listEl   = document.getElementById("leaderboardList");
+  const statusEl = document.getElementById("lbStatus");
+  if (!listEl) return;
+
+  if (!isEnabled()) {
+    listEl.innerHTML = '<div class="lb-empty">Connect Supabase in <code>src/config.js</code> to enable global scores.</div>';
+    return;
+  }
+
+  if (statusEl) statusEl.textContent = "Loading…";
+  const rows = await fetchLeaderboard();
+  if (statusEl) statusEl.textContent = "";
+
+  if (!rows.length) {
+    listEl.innerHTML = '<div class="lb-empty">No scores yet — be the first!</div>';
+    return;
+  }
+
+  listEl.innerHTML = rows.map((row, i) => {
+    const mine   = isMySub(row.player_name, row.score, row.level);
+    const medals = ["#1", "#2", "#3"];
+    const rank   = i < 3 ? `<span class="lb-medal lb-medal-${i+1}">${medals[i]}</span>` : `<span>${i + 1}</span>`;
+    return `<div class="lb-row${mine ? " lb-mine" : ""}">
+      <span class="lb-rank">${rank}</span>
+      <span class="lb-name">${escHtml(row.player_name)}</span>
+      <span class="lb-score">${row.score.toLocaleString()}</span>
+      <span class="lb-level">Lv&nbsp;${row.level}</span>
+    </div>`;
+  }).join("");
+}
+
+// ── Name modal ────────────────────────────────────────────────────────
+const nameModal      = document.getElementById("nameModal");
+const nameInput      = document.getElementById("nameInput");
+const nameConfirmBtn = document.getElementById("nameConfirmBtn");
+const nameSkipBtn    = document.getElementById("nameSkipBtn");
+
+function applyName(name) {
+  state.playerName = name;
+  const display = document.getElementById("callsignDisplay");
+  if (display) display.textContent = name || "—";
+}
+
+function confirmName() {
+  const name = nameInput?.value.trim();
+  if (!name) { nameInput?.classList.add("input-error"); return; }
+  nameInput?.classList.remove("input-error");
+  storeName(name);
+  applyName(name);
+  nameModal.classList.remove("show");
+  els.overlay.classList.add("show");
+  loadLeaderboard();
+}
+
+nameConfirmBtn?.addEventListener("click", confirmName);
+nameSkipBtn?.addEventListener("click", () => {
+  applyName("Guest");
+  nameModal.classList.remove("show");
+  els.overlay.classList.add("show");
+  loadLeaderboard();
+});
+nameInput?.addEventListener("keydown", e => { if (e.key === "Enter") confirmName(); });
+nameInput?.addEventListener("input",   () => nameInput.classList.remove("input-error"));
+
+// ── Startup ───────────────────────────────────────────────────────────
+getPlayerIP().then(ip => { state.playerIP = ip; });
+
+const storedName = getStoredName();
+if (storedName) {
+  applyName(storedName);
+  loadLeaderboard();
+} else {
+  els.overlay.classList.remove("show");
+  nameModal.classList.add("show");
+  setTimeout(() => nameInput?.focus(), 80);
+}
+
+// ── Change-name button in Preferences ────────────────────────────────
+document.getElementById("changeNameBtn")?.addEventListener("click", () => {
+  els.prefsOverlay.classList.remove("show");
+  if (nameInput) nameInput.value = state.playerName !== "Guest" ? state.playerName : "";
+  nameModal.classList.add("show");
+  setTimeout(() => nameInput?.focus(), 80);
+});

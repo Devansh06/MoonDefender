@@ -1,6 +1,6 @@
 import { TAU, BLASTER_REFILL, ROCK_DAMAGE, AUTO_ATTACK_MODES } from "./constants.js";
 import { clamp, norm } from "./utils.js";
-import { state } from "./state.js";
+import { els, state } from "./state.js";
 import { lineIntersectsEarth, moonBlockedForTarget, closestPointOnSegment, laserScreenEdge } from "./physics.js";
 import { starnetRange, addEarthDamage } from "./world.js";
 import { hitRock, clearRock, destroyWithStarnet, applyStarnetField } from "./rocks.js";
@@ -41,14 +41,16 @@ export function shoot(targetX, targetY) {
 
 export function chooseShot(targetX, targetY) {
   const moonBlocked = moonBlockedForTarget(targetX, targetY) || lineIntersectsEarth(state.moon, targetX, targetY, state.earth.r * 0.92);
+  const blasterLocked = Boolean(els.blasterBtn?.dataset.tutLocked);
+  const deflectorLocked = Boolean(els.deflectorBtn?.dataset.tutLocked);
 
-  if (!state.blasterDisabled && state.blasterCooldown <= 0 && (state.selectedWeapon === "blaster" || moonBlocked)) {
+  if (!blasterLocked && !state.blasterDisabled && state.blasterCooldown <= 0 && (state.selectedWeapon === "blaster" || moonBlocked)) {
     if (state.friendlyFire || !lineIntersectsEarth(state.satellite, targetX, targetY, state.earth.r * 0.96)) {
       return { type: "blaster", origin: state.satellite };
     }
   }
 
-  if (moonBlocked) return null;
+  if (moonBlocked || deflectorLocked) return null;
   return { type: "deflector", origin: state.moon };
 }
 
@@ -111,6 +113,7 @@ export function applyBlasterHoming(projectile, dt) {
 }
 
 export function useStarnet() {
+  if (els.starnetBtn?.dataset.tutLocked) return;
   if (!state.running || state.starnet <= 0) return;
   state.starnet -= 1;
   state.starnetRingLife = 2;

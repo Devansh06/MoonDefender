@@ -1,6 +1,6 @@
 import { state, els } from "./state.js";
 import { missionControl } from "./mission-control.js";
-import { selectWeapon, unlockWeapon } from "./hud.js";
+import { lockWeapon, selectWeapon, unlockWeapon } from "./hud.js";
 import { pauseNormalSpawning, setTutorialMode, spawnScriptedRock, resetGame } from "./main.js";
 import { spawnBoss } from "./rocks.js";
 
@@ -9,6 +9,40 @@ let currentStep = -1;
 let tutorialClock = 0;
 let prevHitsCleared = 0;
 let prevStarnetId = 0;
+const TUTORIAL_TIMEOUT = 10;
+
+function setTutorialWeapons(enabled) {
+  ["deflector", "blaster", "starnet"].forEach(name => {
+    if (enabled.includes(name)) unlockWeapon(name);
+    else lockWeapon(name);
+  });
+  if (!enabled.includes(state.selectedWeapon)) {
+    selectWeapon(enabled.includes("deflector") ? "deflector" : enabled[0] || "deflector");
+  }
+}
+
+export function isInActiveTutorial() {
+  return activeSequence !== null && currentStep >= 0;
+}
+
+export function exitActiveTutorial() {
+  if (!isInActiveTutorial()) return;
+  missionControl.silence();
+  activeSequence = null;
+  currentStep = -1;
+  setTutorialMode(false);
+  state.running = false;
+  state.bossActive = false;
+  state.rocks = [];
+  state.projectiles = [];
+  state.particles = [];
+  state.starnetEffects = [];
+  els.tutorialSelectOverlay.classList.remove("show");
+  els.tutEndScreen?.classList.remove("show");
+  els.rockEntryScreen?.classList.remove("show");
+  els.startBtn.textContent = "Start Mission";
+  els.overlay.classList.add("show");
+}
 
 function advanceStep() {
   if (activeSequence === null) return;
@@ -64,6 +98,7 @@ function initTutorialState() {
   state.starnetEffects = [];
   state.starnetRingLife = 0;
   state.starnetActivationId = 0;
+  els.startBtn.textContent = "Start Mission";
   els.pauseBtn.classList.remove("is-paused");
   setTutorialMode(true);
   pauseNormalSpawning();
@@ -73,7 +108,7 @@ function initTutorialState() {
 
 export function startCombat() {
   initTutorialState();
-  unlockWeapon("deflector");
+  setTutorialWeapons(["deflector"]);
   selectWeapon("deflector");
   els.tutorialSelectOverlay.classList.remove("show");
   activeSequence = COMBAT_STEPS;
@@ -86,68 +121,78 @@ const COMBAT_STEPS = [
   // ★ cinematic
   {
     enter() {
-      missionControl.speak("This is Mission Control. We've picked up a hostile approach vector. Earth is not ready. You are.");
+      missionControl.speak("This is Mission Control. We've picked up a hostile approach vector. Earth is not ready. **You are.**");
     },
     waitFor() { return tutorialClock >= 4; },
   },
-  // 1: deflect rock 1
+  // 1: deflect rock 1 — rock hits earth if missed
   {
     enter() {
-      prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("normal", Math.PI * 0.75, true);
-      missionControl.speak("Rock inbound. Tap toward it — the Deflector fires a push-pulse. Redirect it.");
+      setTutorialWeapons(["deflector"]);
+      spawnScriptedRock("normal", Math.PI, false);
+      missionControl.speak("Rock inbound. **Tap** toward it — the Deflector fires a push-pulse. Redirect it.");
     },
-    waitFor() { return state.hitsCleared > prevHitsCleared; },
+    waitFor() { return !state.rocks.some(r => !r.cleared) || tutorialClock > 25; },
+    leave() { state.rocks = []; },
   },
-  // 2: deflect rock 2
+  // 2: deflect rock 2 — rock hits earth if missed
   {
     enter() {
-      prevHitsCleared = state.hitsCleared;
-      spawnScriptedRock("normal", Math.PI * 0.25, true);
+      setTutorialWeapons(["deflector"]);
+      spawnScriptedRock("normal", 0, false);
       missionControl.speak("Another one. Different angle. Stay sharp.");
     },
-    waitFor() { return state.hitsCleared > prevHitsCleared; },
+    waitFor() { return !state.rocks.some(r => !r.cleared) || tutorialClock > 25; },
+    leave() { state.rocks = []; },
   },
-  // 3: unlock blaster, spawn magnetic
+  // 3: magnetic — deflector only, watch it fail, rock hits earth
   {
     enter() {
-      unlockWeapon("blaster");
-      spawnScriptedRock("magnetic", Math.PI * 1.5, true);
-      missionControl.speak("Magnetic contact. Deflecting it won't kill the pull — it'll keep dragging others toward it. Switch to Blaster, key 2. Destroy it.");
+      setTutorialWeapons(["deflector"]);
+      spawnScriptedRock("magnetic", Math.PI, false);
+      missionControl.speak("Magnetic rock. Try your **Deflector** — watch what happens.");
     },
-    waitFor() { return state.selectedWeapon === "blaster" || tutorialClock > 30; },
+    waitFor() { return !state.rocks.some(r => !r.cleared && r.rockType === "magnetic") || tutorialClock > 25; },
+    leave() { state.rocks = []; },
   },
-  // 4: fire blaster — 3rd hit → starnet unlocks
+  // 4: blaster lesson — new magnetic rock, destroy it
   {
     enter() {
-      prevHitsCleared = state.hitsCleared;
-      missionControl.speak("Fire.");
+      setTutorialWeapons(["blaster"]);
+      spawnScriptedRock("magnetic", Math.PI * 0.9, false);
+      missionControl.speak("**Deflector bounces off it.** Switch to **Blaster** and destroy it.");
     },
-    waitFor() { return state.hitsCleared > prevHitsCleared; },
-    leave() {
-      unlockWeapon("starnet");
+    waitFor() {
+      return !state.rocks.some(r => !r.cleared && r.rockType === "magnetic") || tutorialClock > 25;
     },
+    leave() { state.rocks = state.rocks.filter(r => r.rockType !== "magnetic"); },
   },
-  // 4b: pause — Starnet available
+  // 5: Starnet intro
   {
     enter() {
-      missionControl.speak("Starnet is now available.");
+      setTutorialWeapons(["starnet"]);
+      missionControl.speak("**Starnet** is now available.");
     },
     waitFor() { return tutorialClock >= 2.5; },
   },
-  // 5: 4 rocks from spread angles
+  // 6: 4 rocks from spread angles
   {
     enter() {
+      setTutorialWeapons(["starnet"]);
       prevStarnetId = state.starnetActivationId;
-      [Math.PI * 0.1, Math.PI * 0.6, Math.PI * 1.1, Math.PI * 1.7].forEach(a => spawnScriptedRock("normal", a, true));
-      missionControl.speak("Four contacts — too many to pick off. Starnet deploys a full ring shield. Space bar. Use it.");
+      [Math.PI, 0, Math.PI * 1.08, Math.PI * 0.08].forEach(a => spawnScriptedRock("normal", a, true));
+      missionControl.speak("Four contacts — too many to pick off. **Starnet** deploys a full ring shield. Activate it.");
     },
-    waitFor() { return state.starnetActivationId > prevStarnetId; },
+    waitFor() {
+      return (state.starnetActivationId > prevStarnetId && state.starnetRingLife <= 0 && !state.rocks.some(r => !r.cleared))
+        || tutorialClock > 25;
+    },
+    leave() { state.rocks = []; },
   },
   // 6: post-starnet info
   {
     enter() {
-      missionControl.speak("You start with only two charges. Refill them with 3 blasts or deflections. Use them wisely.");
+      missionControl.speak("You start with only **two charges**. Refill: **5 blasts or deflections**. Use them wisely.");
     },
     waitFor() { return tutorialClock >= 4; },
   },
@@ -186,13 +231,12 @@ export function tutEndBackToTutorials() {
 // ─── ROCK TYPES TUTORIAL ─────────────────────────────────────────────────────
 
 const ROCK_TYPE_ORDER = ["normal", "comet", "armored", "magnetic", "healing", "catastrophe"];
+const ROCK_TYPE_TIMEOUT = 25;
 
 export function startRockTypes(entryType) {
   initTutorialState();
+  setTutorialWeapons(["deflector", "blaster", "starnet"]);
   selectWeapon("deflector");
-  unlockWeapon("deflector");
-  unlockWeapon("blaster");
-  unlockWeapon("starnet");
   els.tutorialSelectOverlay.classList.remove("show");
   els.rockEntryScreen?.classList.remove("show");
 
@@ -208,6 +252,11 @@ function buildRockTypeSequence(types) {
   return types.flatMap(type => ROCK_TYPE_STEPS[type] || []);
 }
 
+function noActiveRock(type) {
+  const rockType = type === "catastrophe" ? "boss" : type;
+  return !state.rocks.some(r => !r.cleared && r.rockType === rockType);
+}
+
 const ROCK_TYPE_STEPS = {
   normal: [
     {
@@ -220,7 +269,8 @@ const ROCK_TYPE_STEPS = {
         spawnScriptedRock("normal", Math.PI * 0.75, true);
         missionControl.speak("Standard debris. Small ones go down in one hit. Level 3 to 5 splits on impact — one hit becomes two rocks.");
       },
-      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 30; },
+      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > TUTORIAL_TIMEOUT; },
+      leave() { state.rocks = []; },
     },
   ],
   comet: [
@@ -234,7 +284,8 @@ const ROCK_TYPE_STEPS = {
         spawnScriptedRock("comet", Math.PI * 0.5, true);
         missionControl.speak("Three times normal speed. Fragile — one hit drops it. Worth 150 bonus points.");
       },
-      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 30; },
+      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > TUTORIAL_TIMEOUT; },
+      leave() { state.rocks = []; },
     },
   ],
   armored: [
@@ -248,7 +299,8 @@ const ROCK_TYPE_STEPS = {
         spawnScriptedRock("armored", Math.PI * 1.25, true);
         missionControl.speak("There's a sequence. Learn it or waste shots. Two deflector hits redirect uncracked armor. Or blast to crack it, then one more deflect. Two blasts destroy it entirely.");
       },
-      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 40; },
+      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > TUTORIAL_TIMEOUT; },
+      leave() { state.rocks = []; },
     },
   ],
   magnetic: [
@@ -262,7 +314,8 @@ const ROCK_TYPE_STEPS = {
         spawnScriptedRock("magnetic", Math.PI * 1.0, true);
         missionControl.speak("That dotted ring is a gravity well. Pulling other rocks toward it. You cannot deflect it — blast it or use Starnet. Kill the source — pull stops instantly.");
       },
-      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > 35; },
+      waitFor() { return state.hitsCleared > prevHitsCleared || tutorialClock > TUTORIAL_TIMEOUT; },
+      leave() { state.rocks = []; },
     },
   ],
   healing: [
@@ -276,8 +329,9 @@ const ROCK_TYPE_STEPS = {
         missionControl.speak("This one's different. Don't shoot it. Figure out how to bring it in safely.");
       },
       waitFor() {
-        return !state.rocks.some(r => !r.cleared && r.rockType === "healing") || tutorialClock > 20;
+        return !state.rocks.some(r => !r.cleared && r.rockType === "healing") || tutorialClock > TUTORIAL_TIMEOUT;
       },
+      leave() { state.rocks = []; },
     },
   ],
   catastrophe: [
@@ -293,11 +347,76 @@ const ROCK_TYPE_STEPS = {
         missionControl.speak("Boss-class. Three orbiting companions. Crack the shell first — two hits. One more ends it. Starnet on uncracked armor bounces back. You've been warned.");
       },
       waitFor() {
-        return !state.rocks.some(r => !r.cleared && r.rockType === "boss") || tutorialClock > 60;
+        return !state.rocks.some(r => !r.cleared && r.rockType === "boss") || tutorialClock > TUTORIAL_TIMEOUT;
       },
+      leave() { state.rocks = []; state.bossActive = false; },
     },
   ],
 };
+
+Object.assign(ROCK_TYPE_STEPS, {
+  normal: [
+    {
+      enter() {
+        spawnScriptedRock("normal", Math.PI * 0.75, false);
+        missionControl.speak("Normal rock inbound. Small ones go down in **one hit**. Bigger ones **split into fragments** when hit.");
+      },
+      waitFor() { return noActiveRock("normal") || tutorialClock > ROCK_TYPE_TIMEOUT; },
+      leave() { state.rocks = []; },
+    },
+  ],
+  comet: [
+    {
+      enter() {
+        spawnScriptedRock("comet", Math.PI * 0.5, false);
+        missionControl.speak("Comet inbound. **Three times** normal speed. Fragile: **one hit** drops it. Worth **+150 bonus pts**.");
+      },
+      waitFor() { return noActiveRock("comet") || tutorialClock > ROCK_TYPE_TIMEOUT; },
+      leave() { state.rocks = []; },
+    },
+  ],
+  armored: [
+    {
+      enter() {
+        spawnScriptedRock("armored", Math.PI * 1.25, false);
+        missionControl.speak("Armored rock inbound. **Two Deflector hits** redirect uncracked armor. Or **Blast to crack**, then **Deflect**. **Two Blasts** destroy it entirely.");
+      },
+      waitFor() { return noActiveRock("armored") || tutorialClock > ROCK_TYPE_TIMEOUT; },
+      leave() { state.rocks = []; },
+    },
+  ],
+  magnetic: [
+    {
+      enter() {
+        spawnScriptedRock("magnetic", Math.PI * 1.0, false);
+        missionControl.speak("Magnetic rock inbound. That dotted ring is a gravity well. **Blast it** or use **Starnet** — Deflectors will not stop the pull.");
+      },
+      waitFor() { return noActiveRock("magnetic") || tutorialClock > ROCK_TYPE_TIMEOUT; },
+      leave() { state.rocks = []; },
+    },
+  ],
+  healing: [
+    {
+      enter() {
+        spawnScriptedRock("healing", Math.PI * 0.9, false);
+        missionControl.speak("Healing rock inbound. This one's different. **Don't shoot it.** Use **Starnet** while it's inside the ring to capture it.");
+      },
+      waitFor() { return noActiveRock("healing") || tutorialClock > ROCK_TYPE_TIMEOUT; },
+      leave() { state.rocks = []; },
+    },
+  ],
+  catastrophe: [
+    {
+      enter() {
+        state.bossActive = true;
+        spawnBoss();
+        missionControl.speak("Catastrophe rock inbound. Three orbiting companions. **Two Blasts or Starnet hits** crack the shell. **One more** ends it. **Starnet on uncracked armor bounces back** — you've been warned.");
+      },
+      waitFor() { return noActiveRock("catastrophe") || tutorialClock > 90; },
+      leave() { state.rocks = []; state.bossActive = false; },
+    },
+  ],
+});
 
 function showRockTypesComplete() {
   missionControl.silence();

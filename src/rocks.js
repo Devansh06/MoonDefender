@@ -20,7 +20,6 @@ export function spawnRock(forcedLevel, forcedType) {
   const rockLevel = forcedLevel || clamp(Math.ceil(rand(0, maxRockLevel + 0.9)), 1, maxRockLevel);
   const rockType = forcedType || chooseRockType(rockLevel);
 
-  const far = Math.max(state.w, state.h) * 0.68 + state.earth.r;
   let pos;
   let targetAngle;
   let target;
@@ -39,9 +38,17 @@ export function spawnRock(forcedLevel, forcedType) {
     targetAngle = Math.atan2(target.y - pos.y, target.x - pos.x) + rand(-0.14, 0.14);
   } else {
     const angle = rand(0, TAU);
+    const dir = { x: Math.cos(angle), y: Math.sin(angle) };
+    const margin = 24;
+    const candidates = [];
+    if (dir.x > 1e-6) candidates.push((state.w - state.earth.x - margin) / dir.x);
+    if (dir.x < -1e-6) candidates.push((margin - state.earth.x) / dir.x);
+    if (dir.y > 1e-6) candidates.push((state.h - state.earth.y - margin) / dir.y);
+    if (dir.y < -1e-6) candidates.push((margin - state.earth.y) / dir.y);
+    const edgeDist = Math.min(...candidates.filter(d => d > 0));
     pos = {
-      x: state.earth.x + Math.cos(angle) * far,
-      y: state.earth.y + Math.sin(angle) * far,
+      x: state.earth.x + dir.x * (edgeDist + margin),
+      y: state.earth.y + dir.y * (edgeDist + margin),
     };
     const earthPath = Math.random() < 0.41;
     target = earthPath
@@ -235,16 +242,22 @@ export function predictPath(rock) {
   rock.path = pts;
 }
 
-export function clearRock(rock, destroyed) {
+export function clearRock(rock, destroyed, earthImpact = false) {
   if (rock.cleared) return;
   rock.cleared = true;
-  const successfulDeflection = !destroyed && rock.deflected;
-  if (rock.rockType !== "healing" && rock.rockType !== "boss") {
-    state.score += destroyed ? rock.level * 75 : successfulDeflection ? rock.level * 40 : 0;
-    if (destroyed || successfulDeflection) {
-      state.deflectionsCleared += 1;
-      state.hitsCleared += 1;
-      if (state.hitsCleared % 3 === 0) state.starnet += 1;
+  if (!earthImpact) {
+    const successfulDeflection = !destroyed && rock.deflected;
+    if (rock.rockType !== "healing" && rock.rockType !== "boss") {
+      const pts = destroyed ? rock.level * 75 : successfulDeflection ? rock.level * 40 : 0;
+      state.score += pts;
+      if (destroyed || successfulDeflection) {
+        state.deflectionsCleared += 1;
+        state.hitsCleared += 1;
+        if (state.hitsCleared % 5 === 0) state.starnet += 1;
+      }
+      if (pts > 0 && rock.rockType !== "comet") {
+        state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 5, text: `+${pts}`, life: 1.2, maxLife: 1.2, vy: -40, color: destroyed ? "#ffcf70" : "#8ff0b2" });
+      }
     }
   }
   addBurst(rock.x, rock.y, destroyed ? "#ffcf70" : "#8ff0b2", 16 + rock.level * 4);
@@ -314,6 +327,7 @@ export function applyMagneticPull(dt) {
 export function hitRock(rock, projectile) {
   if (rock.rockType === "comet") {
     state.score += 150;
+    state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 5, text: "+150", life: 1.4, maxLife: 1.4, vy: -55, color: "#88eeff" });
     addBurst(rock.x, rock.y, "#aaeeff", 20);
     clearRock(rock, true);
     return;
@@ -325,8 +339,14 @@ export function hitRock(rock, projectile) {
       rock.vx += impulse.x * 180;
       rock.vy += impulse.y * 180;
       rock.deflected = true;
+      const penalty = 15;
+      state.score = Math.max(0, state.score - penalty);
+      state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 5, text: `-${penalty}`, life: 1.2, maxLife: 1.2, vy: -40, color: "#ff9944" });
       addBurst(rock.x, rock.y, "#44ff88", 8);
     } else {
+      const penalty = 50;
+      state.score = Math.max(0, state.score - penalty);
+      state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 5, text: `-${penalty}`, life: 1.2, maxLife: 1.2, vy: -40, color: "#ff6644" });
       addBurst(rock.x, rock.y, "#ff8844", 12);
       clearRock(rock, true);
     }
@@ -377,6 +397,7 @@ export function hitRock(rock, projectile) {
     if (rock.cracked) {
       releaseBoundComets(rock);
       state.score += 500;
+      state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 10, text: "+500", life: 1.8, maxLife: 1.8, vy: -45, color: "#cc44ff" });
       state.starnet += 3;
       state.bossActive = false;
       state.levelClock = 5;
@@ -416,7 +437,9 @@ export function hitRock(rock, projectile) {
 }
 
 export function splitRock(rock, pieces, newLevel, projectile, impulse) {
-  state.score += 30 * rock.level;
+  const splitPts = 30 * rock.level;
+  state.score += splitPts;
+  state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 5, text: `+${splitPts}`, life: 1.2, maxLife: 1.2, vy: -40, color: "#ffcf70" });
   addBurst(rock.x, rock.y, "#ffcf70", 22);
   const earthward = norm(state.earth.x - rock.x, state.earth.y - rock.y);
   const parentMass = rock.r * rock.r;
@@ -501,6 +524,7 @@ export function destroyWithStarnet(rock) {
   if (rock.rockType === "boss") {
     releaseBoundComets(rock);
     state.score += 500;
+    state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 10, text: "+500", life: 1.8, maxLife: 1.8, vy: -45, color: "#cc44ff" });
     state.starnet += 3;
     state.bossActive = false;
     state.levelClock = 5;
@@ -513,8 +537,8 @@ export function destroyWithStarnet(rock) {
 export function captureHealingRock(rock) {
   const healed = state.damage * 0.33;
   state.damage = Math.max(0, state.damage - healed);
-  state.score += 200;
   rock.cleared = true;
+  state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 5, text: "Earth +33% HP", life: 1.8, maxLife: 1.8, vy: -35, color: "#44ff88" });
   addBurst(rock.x, rock.y, "#44ff88", 32);
   state.hazardBanner = { text: `Healing Rock captured! Earth healed 33%`, timeLeft: 2.5 };
 }

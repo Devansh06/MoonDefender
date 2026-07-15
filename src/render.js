@@ -62,6 +62,8 @@ export function draw() {
   drawStarnetEffects();
   drawParticles();
   ctx.restore();
+  drawIncomingIndicators();
+  drawFloatingTexts();
   drawReticle();
   drawHazardBanner();
   drawHazardIndicator();
@@ -742,6 +744,69 @@ function drawHazardBanner() {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.fillText(state.hazardBanner.text, state.w / 2, state.h * 0.46 + 25);
+  ctx.restore();
+}
+
+function clampAngleToEdge(cx, cy, angle, margin) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  const candidates = [];
+  if (cos > 1e-6)  candidates.push((state.w - margin - cx) / cos);
+  if (cos < -1e-6) candidates.push((margin - cx) / cos);
+  if (sin > 1e-6)  candidates.push((state.h - margin - cy) / sin);
+  if (sin < -1e-6) candidates.push((margin - cy) / sin);
+  const t = Math.min(...candidates.filter(d => d > 0));
+  return { x: cx + cos * t, y: cy + sin * t };
+}
+
+function drawIncomingIndicators() {
+  if (!state.running) return;
+  const margin = 22;
+  for (const rock of state.rocks) {
+    if (rock.cleared) continue;
+    const onScreen = rock.x >= 0 && rock.x <= state.w && rock.y >= 0 && rock.y <= state.h;
+    if (onScreen) continue;
+    const angle = Math.atan2(rock.y - state.earth.y, rock.x - state.earth.x);
+    const pt = clampAngleToEdge(state.earth.x, state.earth.y, angle, margin);
+    const color = rock.rockType === "boss"     ? "#cc44ff"
+      : rock.rockType === "comet"              ? "#88eeff"
+      : rock.rockType === "healing"            ? "#44ff88"
+      : rock.rockType === "armored"            ? "#c8c8b4"
+      : rock.rockType === "magnetic"           ? "#c070ff"
+      : rock.level >= 4                        ? "#ff6e7b"
+      : "#9eb3c6";
+    ctx.save();
+    ctx.translate(pt.x, pt.y);
+    ctx.rotate(angle);
+    ctx.globalAlpha = 0.82;
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    const as = 9;
+    ctx.beginPath();
+    ctx.moveTo(as, 0);
+    ctx.lineTo(-as, -as * 0.6);
+    ctx.lineTo(-as,  as * 0.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+function drawFloatingTexts() {
+  if (!state.floatingTexts || !state.floatingTexts.length) return;
+  ctx.save();
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  for (const ft of state.floatingTexts) {
+    const alpha = clamp(ft.life / ft.maxLife * 2, 0, 1);
+    ctx.globalAlpha = alpha;
+    ctx.font = "bold 15px sans-serif";
+    ctx.fillStyle = ft.color;
+    ctx.shadowColor = ft.color;
+    ctx.shadowBlur = 10;
+    ctx.fillText(ft.text, ft.x, ft.y);
+  }
   ctx.restore();
 }
 

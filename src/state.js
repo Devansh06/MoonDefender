@@ -33,15 +33,13 @@ export const els = {
   rockEntryScreen:     document.getElementById("rockEntryScreen"),
   rockEntryCloseBtn:   document.getElementById("rockEntryCloseBtn"),
   rockEntryBackBtn:    document.getElementById("rockEntryBackBtn"),
-  elApiKeyInput:   document.getElementById("elApiKeyInput"),
-  elApiKeySaveBtn: document.getElementById("elApiKeySaveBtn"),
-  musicMuteBtn:    document.getElementById("musicMuteBtn"),
-  musicMuteLabel:  document.getElementById("musicMuteLabel"),
   speedBtn:          document.getElementById("speedBtn"),
   fullscreenBtn:     document.getElementById("fullscreenBtn"),
   fullscreenHudBtn:  document.getElementById("fullscreenHudBtn"),
   autoModeBtn:       document.getElementById("autoModeBtn"),
   autoModeLabel:     document.getElementById("autoModeLabel"),
+  targetBtn:         document.getElementById("targetBtn"),
+  targetLabel:       document.getElementById("targetLabel"),
   panelCloseBtn:     document.getElementById("panelCloseBtn"),
   prefsBtn:          document.getElementById("prefsBtn"),
   prefsOverlay:      document.getElementById("prefsOverlay"),
@@ -70,7 +68,7 @@ export const state = {
   blasterCooldown: 0, earthSpin: 0, shake: 0,
   // collections
   projectiles: [], rocks: [], particles: [],
-  lasers: [], starnetEffects: [],
+  lasers: [], starnetEffects: [], floatingTexts: [],
   // earth
   earthTextureReady: false, earthTextureData: null,
   // starnet
@@ -93,6 +91,9 @@ export const state = {
   bossActive: false,
   // tutorial
   tutorialMode: false,
+  // player identity
+  playerName: "",
+  playerIP: "",
   // auto-attack
   autoAttackMode: AUTO_ATTACK_MODES[0],
   // preferences (persist across resets)

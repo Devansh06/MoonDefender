@@ -46,19 +46,38 @@
           <span>Starnet</span>
           <small id="starnetCount">2</small>
         </button>
+        <button id="targetBtn" class="hud-btn target-btn" type="button" title="Cycle auto-attack targeting mode"><small id="targetLabel">Auto</small></button>
         <button id="speedBtn" class="hud-btn speed-btn" type="button" title="Game speed (cycle 1× / 1.5× / 2×)">1×</button>
         <button id="fullscreenHudBtn" class="hud-btn" type="button" title="Toggle fullscreen">&#x26F6;</button>
       </aside>
 
+      <!-- Name / callsign modal (shown on first visit) -->
+      <div id="nameModal" class="overlay">
+        <div class="panel">
+          <div class="panel-header">
+            <span style="margin:0;font-size:15px;color:#031019;font-weight:800;letter-spacing:.06em">MOON DEFENDER</span>
+          </div>
+          <div class="panel-body">
+            <h2 style="margin:0 0 8px;font-size:24px">Welcome, Defender</h2>
+            <p style="margin:0 0 22px">Enter your callsign to appear on the global leaderboard.</p>
+            <input id="nameInput" class="name-input" type="text" maxlength="20" placeholder="Your callsign…" autocomplete="off" spellcheck="false">
+            <nav class="panel-nav" style="margin-top:12px">
+              <button id="nameConfirmBtn" class="nav-btn nav-primary" type="button">Enter</button>
+              <button id="nameSkipBtn" class="nav-btn" type="button">Play as Guest</button>
+            </nav>
+          </div>
+        </div>
+      </div>
+
       <!-- Start / Game Over overlay -->
       <div id="overlay" class="overlay show">
-        <div class="panel">
+        <div class="panel panel-main">
           <div class="panel-header">
             <button id="panelCloseBtn" class="panel-close" type="button" aria-label="Close">&#x2715;</button>
           </div>
           <div class="panel-body">
             <h1>Moon Defender</h1>
-            <p>Fire from the orbiting moon. Tap anywhere to shoot, switch weapons below, and keep space rocks away from Earth.</p>
+            <p>Fire from the orbiting moon. <span class="show-touch">Tap</span><span class="show-mouse">Click</span> anywhere to shoot, switch weapons below, and keep space rocks away from Earth.</p>
 
             <nav class="panel-nav">
               <button id="startBtn" class="nav-btn nav-primary" type="button">Start Mission</button>
@@ -66,6 +85,16 @@
               <button id="prefsBtn" class="nav-btn" type="button">Preferences</button>
               <button id="fullscreenBtn" class="nav-btn nav-icon" type="button" title="Toggle fullscreen">&#x26F6;</button>
             </nav>
+
+            <section class="lb-section">
+              <div class="lb-header">
+                <span class="lb-title">Global High Scores</span>
+                <span id="lbStatus" class="lb-status"></span>
+              </div>
+              <div id="leaderboardList" class="lb-list">
+                <div class="lb-loading">—</div>
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -84,11 +113,12 @@
             <div class="tut-section">
               <p class="tut-section-title">Controls</p>
               <div class="tut-controls">
-                <div class="ctrl-item"><kbd>Tap / Click</kbd><span>Shoot toward that point</span></div>
-                <div class="ctrl-item"><kbd>1 / Numpad1</kbd><span>Deflector — auto-fires using target mode</span></div>
-                <div class="ctrl-item"><kbd>2 / Numpad2</kbd><span>Blaster — auto-fires using target mode</span></div>
-                <div class="ctrl-item"><kbd>Space / 3 / Numpad3</kbd><span>Starnet shield + moon lasers</span></div>
+                <div class="ctrl-item"><kbd><span class="show-touch">Tap</span><span class="show-mouse">Click</span></kbd><span>Shoot toward that point</span></div>
+                <div class="ctrl-item kbd-only"><kbd>1 / Numpad1</kbd><span>Deflector — auto-fires using target mode</span></div>
+                <div class="ctrl-item kbd-only"><kbd>2 / Numpad2</kbd><span>Blaster — auto-fires using target mode</span></div>
+                <div class="ctrl-item kbd-only"><kbd>Space / 3</kbd><span>Starnet shield + moon lasers</span></div>
                 <div class="ctrl-item"><kbd>Target btn</kbd><span>Cycle auto-attack: Auto · Special · Closest · Danger · Fastest</span></div>
+                <div class="ctrl-item kbd-only"><kbd>P / Esc</kbd><span>Pause</span></div>
               </div>
             </div>
 
@@ -101,11 +131,11 @@
                     <circle cx="22" cy="22" r="21" fill="#060d1f"/>
                     <polygon points="22,12 29,16 31,23 27,29 17,29 13,23 15,16" fill="#9a7662" stroke="rgba(255,255,255,0.28)" stroke-width="1.2"/>
                     <circle cx="22" cy="22" r="5" fill="#bfc0bb" opacity="0.35"/>
-                    <text x="22" y="41" font-size="6" fill="#9eb3c6" text-anchor="middle" font-family="sans-serif">Lv 1–5</text>
+                    <text x="22" y="41" font-size="6" fill="#9eb3c6" text-anchor="middle" font-family="sans-serif">Normal</text>
                   </svg>
                   <div class="rock-info">
                     <strong style="color:#c0bfbc">Normal Rock</strong>
-                    <span>Lv 1–2 destroyed in one blast. Lv 3–5 split on hit. Deflector pushes them off course. Max damage 35.</span>
+                    <span>Small rocks destroyed in one hit. Bigger rocks <em>split into fragments</em> when hit. Deflector pushes them off course. Max damage 35.</span>
                   </div>
                 </div>
 
@@ -290,6 +320,13 @@
 
             <div class="prefs-list">
               <div class="pref-row">
+                <span class="pref-label">Callsign</span>
+                <div class="callsign-pref">
+                  <span id="callsignDisplay" class="callsign-value">—</span>
+                  <button id="changeNameBtn" class="setting-btn" type="button">Change</button>
+                </div>
+              </div>
+              <div class="pref-row">
                 <span class="pref-label">Auto-Attack</span>
                 <button id="autoModeBtn" class="setting-btn" type="button" title="Cycle auto-attack targeting mode">
                   <small id="autoModeLabel">Auto</small>
@@ -310,19 +347,6 @@
                   <button class="sat-btn" data-offset="225" type="button">225°</button>
                   <button class="sat-btn" data-offset="270" type="button">270°</button>
                 </div>
-              </div>
-              <div class="pref-row pref-row-block">
-                <span class="pref-label">MC Voice (ElevenLabs)</span>
-                <div class="pref-voice-row">
-                  <input id="elApiKeyInput" class="pref-input" type="password" placeholder="Paste API key" autocomplete="off"/>
-                  <button id="elApiKeySaveBtn" class="setting-btn" type="button">Save</button>
-                </div>
-              </div>
-              <div class="pref-row">
-                <span class="pref-label">Music</span>
-                <button id="musicMuteBtn" class="setting-btn toggle" type="button">
-                  <small id="musicMuteLabel">On</small>
-                </button>
               </div>
             </div>
 

@@ -25,7 +25,7 @@ const FEATURES = {
     "Starnet",
   ],
   "Controls": [
-    "Tap / Click",
+    "Tap",
     "moon lasers",
     "Fastest",
   ],
