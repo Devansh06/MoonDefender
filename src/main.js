@@ -13,13 +13,13 @@ import { tutorialTick, startCombat, startRockTypes, tutEndStartMission, tutEndBa
 import { missionControl } from "./mission-control.js";
 
 function buildHazardSchedule() {
-  const pool = ["meteor", "solar", "moon", "gravity", "meteor", "moon", "solar"];
+  const pool = ["meteor", "solar", "moon", "gravity", "meteor", "moon"];
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [pool[i], pool[j]] = [pool[j], pool[i]];
   }
-  // levels 1-2: no hazard, levels 3-9: one each (randomised), level 10: no hazard
-  return [null, null, ...pool, null];
+  // null at levels 1, 2, 5 (boss), 10 (boss); hazards at 3, 4, 6, 7, 8, 9
+  return [null, null, pool[0], pool[1], null, pool[2], pool[3], pool[4], pool[5], null];
 }
 
 export function resetGame() {
@@ -270,8 +270,8 @@ function endGame(message) {
   document.getElementById("endScore").textContent = `Score: ${state.score.toLocaleString()}`;
   document.getElementById("endAccuracy").textContent = `${accuracy}%`;
   document.getElementById("statsRockBody").innerHTML = Object.entries(state.rockStats).map(([type, s]) => {
+    if (type === "boss") return "";
     if (type === "healing") return `<tr><td>${typeLabels[type]}</td><td colspan="2" style="text-align:center">${s.captured} captured</td></tr>`;
-    if (type === "boss")    return `<tr><td>${typeLabels[type]}</td><td colspan="2" style="text-align:center">${s.destroyed} defeated</td></tr>`;
     return `<tr><td>${typeLabels[type]}</td><td>${s.destroyed}</td><td>${s.deflected}</td></tr>`;
   }).join("");
   drawWorldMap();

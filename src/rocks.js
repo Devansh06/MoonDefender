@@ -373,10 +373,11 @@ export function hitRock(rock, projectile) {
       } else {
         rock.armorHits += 1;
         rock.cracked = true;
-        state.shake = 0.18;
-        rock.vx += impulse.x * 80;
-        rock.vy += impulse.y * 80;
-        addBurst(rock.x, rock.y, "#ffcf70", 10);
+        state.shake = 0.22;
+        rock.vx += impulse.x * 130;
+        rock.vy += impulse.y * 130;
+        addBurst(rock.x, rock.y, "#ffcf70", 16);
+        state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 8, text: "CRACKED!", life: 1.3, maxLife: 1.3, vy: -45, color: "#ffcf70" });
       }
       return;
     }
@@ -385,8 +386,9 @@ export function hitRock(rock, projectile) {
       clearRock(rock, true);
     } else {
       rock.cracked = true;
-      state.shake = 0.2;
-      addBurst(rock.x, rock.y, "#ffcf70", 10);
+      state.shake = 0.22;
+      addBurst(rock.x, rock.y, "#ffcf70", 16);
+      state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 8, text: "CRACKED!", life: 1.3, maxLife: 1.3, vy: -45, color: "#ffcf70" });
     }
     return;
   }
@@ -541,6 +543,7 @@ function captureHealingRock(rock) {
   const healed = state.damage * 0.33;
   state.damage = Math.max(0, state.damage - healed);
   rock.cleared = true;
+  if (!state.tutorialMode && state.rockStats.healing) state.rockStats.healing.captured += 1;
   state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 5, text: "Earth +33% HP", life: 1.8, maxLife: 1.8, vy: -35, color: "#44ff88" });
   addBurst(rock.x, rock.y, "#44ff88", 32);
   state.hazardBanner = { text: `Healing Rock captured! Earth healed 33%`, timeLeft: 2.5 };
