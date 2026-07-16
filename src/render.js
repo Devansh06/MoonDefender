@@ -6,6 +6,9 @@ import { geoToScreen, normalizeLon, starnetRange } from "./world.js";
 const earthFrameCanvas = document.createElement("canvas");
 const earthFrameCtx = earthFrameCanvas.getContext("2d", { willReadFrequently: true });
 
+const _starnetImg = new Image();
+_starnetImg.src = "src/Starnet.png";
+
 export function addBurst(x, y, color, count) {
   for (let i = 0; i < count; i += 1) {
     const a = rand(0, TAU);
@@ -386,77 +389,55 @@ function drawHealthRing() {
 function drawStarnetBadge() {
   if (!state.running) return;
   const { x, y, r } = state.earth;
-  const count = state.starnet;
-  const has = count > 0;
-  const R = r * 0.28;
-  const clearR = R * 0.42;
-  const color = has ? "#72e6ff" : "rgba(255,80,100,0.6)";
+  const count  = state.starnet;
+  const has    = count > 0;
+  const R      = r * 0.28;
+  const CYAN   = "#72e6ff";
+  const RED    = "#ff4e6e";
+  const color  = has ? CYAN : RED;
 
   ctx.save();
 
-  // Dark background
+  // Dark base
   ctx.beginPath();
   ctx.arc(x, y, R, 0, TAU);
-  ctx.fillStyle = "rgba(0,5,15,0.82)";
+  ctx.fillStyle = "#000";
   ctx.fill();
 
-  // Cage bars clipped to circle, stopping before centre gap
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(x, y, R, 0, TAU);
-  ctx.clip();
+  // Outer ring with breathing pulse
+  const ringW = Math.max(1.5, R * 0.05);
+  const pulse = (Math.sin(performance.now() * 0.0018) + 1) / 2;
   ctx.strokeStyle = color;
-  ctx.lineWidth = Math.max(1, R * 0.09);
-  ctx.globalAlpha = 0.65;
-  for (let i = -2; i <= 2; i++) {
-    const off = i * R * 0.5;
-    // vertical segment above centre gap
-    ctx.beginPath();
-    ctx.moveTo(x + off, y - R);
-    ctx.lineTo(x + off, y - clearR);
-    ctx.stroke();
-    // vertical segment below centre gap
-    ctx.beginPath();
-    ctx.moveTo(x + off, y + clearR);
-    ctx.lineTo(x + off, y + R);
-    ctx.stroke();
-    // horizontal segment left of centre gap
-    ctx.beginPath();
-    ctx.moveTo(x - R, y + off);
-    ctx.lineTo(x - clearR, y + off);
-    ctx.stroke();
-    // horizontal segment right of centre gap
-    ctx.beginPath();
-    ctx.moveTo(x + clearR, y + off);
-    ctx.lineTo(x + R, y + off);
-    ctx.stroke();
-  }
-  ctx.restore();
-
-  // Outer cage ring
-  ctx.globalAlpha = 1;
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 2;
-  if (has) { ctx.shadowColor = "#72e6ff"; ctx.shadowBlur = 12; }
+  ctx.lineWidth   = ringW;
+  if (has) { ctx.shadowColor = CYAN; ctx.shadowBlur = R * 0.55 + pulse * R * 0.28; }
   ctx.beginPath();
-  ctx.arc(x, y, R, 0, TAU);
+  ctx.arc(x, y, R - ringW * 0.5, 0, TAU);
   ctx.stroke();
   ctx.shadowBlur = 0;
 
-  // Dark backdrop for count so it reads cleanly over the bars
+  // Clip to inside of ring
+  const innerR = R - ringW * 1.1;
   ctx.beginPath();
-  ctx.arc(x, y, clearR * 0.88, 0, TAU);
-  ctx.fillStyle = "rgba(0,5,15,0.80)";
-  ctx.fill();
+  ctx.arc(x, y, innerR, 0, TAU);
+  ctx.clip();
 
-  // Count centred inside the cage
-  const fs = Math.round(Math.max(11, R * 0.62));
-  ctx.fillStyle = has ? "#72e6ff" : "rgba(255,100,120,0.80)";
-  if (has) { ctx.shadowColor = "#72e6ff"; ctx.shadowBlur = 8; }
-  ctx.font = `bold ${fs}px sans-serif`;
-  ctx.textAlign = "center";
+  // Starnet.png — tight crop of dome+earth, badge circle clips the corners
+  if (_starnetImg.complete && _starnetImg.naturalWidth) {
+    const sx = 270, sy = 10, sw = 1140, sh = 760;
+    const dw = innerR * 1.78;
+    const dh = dw * (sh / sw);
+    ctx.drawImage(_starnetImg, sx, sy, sw, sh, x - dw / 2, y - innerR, dw, dh);
+  }
+
+  // Count in lower strip
+  const numY = y + innerR * 0.60;
+  const fs   = Math.round(Math.max(8, innerR * 0.52));
+  ctx.textAlign    = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(String(count), x, y + 1);
+  ctx.fillStyle    = has ? CYAN : RED;
+  if (has) { ctx.shadowColor = CYAN; ctx.shadowBlur = fs * 0.7; }
+  ctx.font = `bold ${fs}px ui-monospace, monospace`;
+  ctx.fillText(String(count), x, numY);
   ctx.shadowBlur = 0;
 
   ctx.restore();
@@ -728,37 +709,20 @@ function drawLasers() {
     const t = clamp(laser.life / laser.maxLife, 0, 1);
     ctx.save();
     ctx.globalAlpha = t;
-    if (laser.fromMoon) {
-      ctx.strokeStyle = "#72e6ff";
-      ctx.lineWidth = 4;
-      ctx.shadowColor = "#72e6ff";
-      ctx.shadowBlur = 16;
-      ctx.beginPath();
-      ctx.moveTo(laser.x1, laser.y1);
-      ctx.lineTo(laser.x2, laser.y2);
-      ctx.stroke();
-      ctx.strokeStyle = "#d8f8ff";
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(laser.x1, laser.y1);
-      ctx.lineTo(laser.x2, laser.y2);
-      ctx.stroke();
-    } else {
-      ctx.strokeStyle = "#ffcf70";
-      ctx.lineWidth = 7;
-      ctx.shadowColor = "#ffcf70";
-      ctx.shadowBlur = 20;
-      ctx.beginPath();
-      ctx.moveTo(laser.x1, laser.y1);
-      ctx.lineTo(laser.x2, laser.y2);
-      ctx.stroke();
-      ctx.strokeStyle = "#fff8d6";
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(laser.x1, laser.y1);
-      ctx.lineTo(laser.x2, laser.y2);
-      ctx.stroke();
-    }
+    ctx.strokeStyle = "#ffcf70";
+    ctx.lineWidth = 7;
+    ctx.shadowColor = "#ffcf70";
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.moveTo(laser.x1, laser.y1);
+    ctx.lineTo(laser.x2, laser.y2);
+    ctx.stroke();
+    ctx.strokeStyle = "#fff8d6";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(laser.x1, laser.y1);
+    ctx.lineTo(laser.x2, laser.y2);
+    ctx.stroke();
     ctx.restore();
   }
 }

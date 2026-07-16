@@ -62,9 +62,8 @@
       <!-- Start / Game Over overlay -->
       <div id="overlay" class="overlay show">
         <div class="panel panel-main">
-          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
           <div class="panel-header">
-            <button id="panelCloseBtn" class="panel-close" type="button" aria-label="Close">&#x2715;</button>
+            <button class="panel-fs-btn panel-close" type="button" title="Toggle fullscreen"></button>
           </div>
           <div class="panel-body">
             <h1>Moon Defender</h1>
@@ -72,7 +71,7 @@
 
             <nav class="panel-nav">
               <button id="startBtn" class="nav-btn nav-primary" type="button">Start Mission</button>
-              <button id="tutorialBtn" class="nav-btn" type="button">Tutorial</button>
+              <button id="tutorialBtn" class="nav-btn" type="button">How-to-Play</button>
               <button id="prefsBtn" class="nav-btn" type="button">Preferences</button>
             </nav>
 
@@ -134,11 +133,9 @@
       <!-- Tutorial overlay -->
       <div id="tutorialOverlay" class="overlay">
         <div class="tut-panel">
-          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
-
           <div class="tut-header">
-            <h2>How to Play</h2>
-            <button id="tutCloseBtn" class="tut-close" type="button" aria-label="Close">&#x2715;</button>
+            <h2>Game Guide</h2>
+            <button class="panel-fs-btn tut-close" type="button" title="Toggle fullscreen"></button>
           </div>
 
           <div class="tut-body">
@@ -147,12 +144,11 @@
               <p class="tut-section-title">Controls</p>
               <div class="tut-controls">
                 <div class="ctrl-item"><kbd><span class="show-touch">Tap</span><span class="show-mouse">Click</span></kbd><span>Shoot toward that point</span></div>
-                <div class="ctrl-item kbd-only"><kbd>1 / Numpad1</kbd><span>Deflector — auto-fires using target mode</span></div>
-                <div class="ctrl-item kbd-only"><kbd>2 / Numpad2</kbd><span>Blaster — auto-fires using target mode</span></div>
-                <div class="ctrl-item"><kbd><span class="show-touch">Tap</span><span class="show-mouse">Click</span> Earth</kbd><span>Starnet shield + moon lasers</span></div>
-                <div class="ctrl-item kbd-only"><kbd>Space / 3</kbd><span>Starnet (keyboard shortcut)</span></div>
-                <div class="ctrl-item"><kbd>Target btn</kbd><span>Cycle auto-attack: Auto · Special · Closest · Danger · Fastest</span></div>
-                <div class="ctrl-item kbd-only"><kbd>P / Esc</kbd><span>Pause</span></div>
+                <div class="ctrl-item kbd-only"><kbd>1 / Numpad1</kbd><span>Auto-fire deflector at best target</span></div>
+                <div class="ctrl-item"><kbd><span class="show-touch">Tap</span><span class="show-mouse">Click</span> Earth</kbd><span>Deploy starnet shield</span></div>
+                <div class="ctrl-item kbd-only"><kbd>2 / Numpad2</kbd><span>Auto-fire blaster at best target</span></div>
+                <div class="ctrl-item"><kbd><span class="show-mouse">P / Esc</span><span class="show-touch">&#x23F8; btn</span></kbd><span>Pause</span></div>
+                <div class="ctrl-item kbd-only"><kbd>Space / 3 / S</kbd><span>Starnet (keyboard shortcut)</span></div>
               </div>
             </div>
 
@@ -196,7 +192,7 @@
                   </svg>
                   <div class="rock-info">
                     <strong style="color:#c8c8b4">Armored Rock</strong>
-                    <span>Max 1 active. <em>Deflector: 2 hits</em> to redirect (uncracked). <em>Blaster first hit</em> cracks it — then <em>1 deflector hit</em> deflects. Blaster second hit destroys.</span>
+                    <span>Max 1 active. First hit (<em>deflector or blaster</em>) cracks the armor. Then <em>deflect</em> to redirect, or <em>blast again</em> to destroy.</span>
                   </div>
                 </div>
 
@@ -290,9 +286,8 @@
       <!-- Tutorial select overlay -->
       <div id="tutorialSelectOverlay" class="overlay">
         <div class="panel">
-          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
           <div class="panel-header">
-            <button id="tutSelCloseBtn" class="panel-close" type="button" aria-label="Close">&#x2715;</button>
+            <button class="panel-fs-btn panel-close" type="button" title="Toggle fullscreen"></button>
           </div>
           <div class="panel-body">
             <h2>Tutorials</h2>
@@ -300,7 +295,7 @@
             <nav class="panel-nav">
               <button id="tutCombatBtn"    class="nav-btn nav-primary" type="button">Combat Tutorial</button>
               <button id="tutRocksBtn"     class="nav-btn" type="button">Rock Types Guide</button>
-              <button id="tutHowToPlayBtn" class="nav-btn" type="button">How-to-Play</button>
+              <button id="tutHowToPlayBtn" class="nav-btn" type="button">Game Guide</button>
               <button id="tutSelBackBtn"   class="nav-btn" type="button">&#8592; Back</button>
             </nav>
           </div>
@@ -325,9 +320,8 @@
       <!-- Rock types entry / completion screen -->
       <div id="rockEntryScreen" class="overlay">
         <div class="panel">
-          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
           <div class="panel-header">
-            <button id="rockEntryCloseBtn" class="panel-close" type="button" aria-label="Close">&#x2715;</button>
+            <button class="panel-fs-btn panel-close" type="button" title="Toggle fullscreen"></button>
           </div>
           <div class="panel-body">
             <h2>Rock Types Guide</h2>
@@ -349,9 +343,8 @@
       <!-- Preferences overlay -->
       <div id="prefsOverlay" class="overlay">
         <div class="panel">
-          <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
           <div class="panel-header">
-            <button id="prefsCloseBtn" class="panel-close" type="button" aria-label="Close">&#x2715;</button>
+            <button class="panel-fs-btn panel-close" type="button" title="Toggle fullscreen"></button>
           </div>
           <div class="panel-body">
             <h2 class="prefs-title">Preferences</h2>

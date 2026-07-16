@@ -7,7 +7,7 @@ export function updateHud() {
   els.timer.textContent = state.bossActive ? "CATAS" : Math.max(0, Math.ceil(state.levelClock));
   els.score.textContent = state.score;
   if (!els.blasterBtn.dataset.tutLocked) {
-    els.blasterBtn.disabled = state.blasterDisabled || (state.blasterCooldown > 0 && state.selectedWeapon !== "blaster");
+    els.blasterBtn.disabled = state.blasterDisabled || state.blasterCooldown > 0;
     els.blasterBtn.classList.toggle("ready", state.blasterCooldown <= 0 && !state.blasterDisabled);
   }
   if (!els.starnetBtn.dataset.tutLocked) {

@@ -44,7 +44,7 @@ Key fields: `x y vx vy level rockType r cleared deflected cracked armorHits`
 |---|---|---|
 | `normal` | 1+ | Lv 1–2: one-shot. Bigger rocks split into fragments on hit. |
 | `comet` | 2+ | 3× speed, fire trail, one-shot, +150 pts |
-| `armored` | 3+ | 2 deflector hits or 1 blast (cracks) + 1 deflect, or 2 blasts |
+| `armored` | 3+ | First hit (deflector or blaster) cracks armor; then deflect to redirect, or blast again to destroy |
 | `magnetic` | 4+ | Pulls nearby rocks; deflector bounces off; blast/starnet kills |
 | `healing` | 5+ | Don't shoot — capture via Starnet; restores 33% HP |
 | `boss` | 5, 10 | 3 orbiting companions; crack with 2 blasts, then 1 more; 50 HP on Earth hit (25 HP when cracked) |
@@ -65,9 +65,7 @@ Armored rocks deal half Earth damage when cracked (`Math.ceil(ROCK_DAMAGE[level]
 
 Blaster cooldown shown as a buffering arc ring around the satellite (fills over 1.5s, no text).
 
-Moon laser fires from moon position every 0.5s while Starnet ring is active (`state.starnetRingLife > 0`).
-
-Starnet deployment radius is always shown as a dashed cyan ring around Earth. When active the ring glows. Count displayed as a badge on Earth; red ring when 0 charges remain.
+Starnet deployment radius is always shown as a dashed cyan ring around Earth. When active the ring glows. Count displayed as a circular badge on Earth (PNG globe image + dome, cyan ring, charge number); ring and number turn red when 0 charges remain.
 
 ### Earth damage (`src/world.js`)
 

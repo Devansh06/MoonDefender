@@ -281,7 +281,7 @@ const ROCK_TYPE_STEPS = {
     {
       enter() {
         spawnScriptedRock("armored", Math.PI * 1.25, false);
-        missionControl.speak("Armored rock inbound. **Two Deflector hits** redirect uncracked armor. Or **Blast to crack**, then **Deflect**. **Two Blasts** destroy it entirely.");
+        missionControl.speak("Armored rock inbound. **Deflector or Blaster** cracks the armor on the first hit. Then **Deflect** to redirect, or **Blast again** to destroy it.");
       },
       waitFor() { return noActiveRock("armored") || tutorialClock > ROCK_TYPE_TIMEOUT; },
       leave() { state.rocks = []; },

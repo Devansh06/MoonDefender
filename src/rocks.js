@@ -371,18 +371,12 @@ export function hitRock(rock, projectile) {
         rock.deflected = true;
         addBurst(rock.x, rock.y, "#8ff0b2", 14);
       } else {
-        rock.deflectorHits += 1;
-        if (rock.deflectorHits >= 2) {
-          rock.vx += impulse.x * (165 + rock.level * 22) + projectile.vx * 0.12;
-          rock.vy += impulse.y * (165 + rock.level * 22) + projectile.vy * 0.12;
-          rock.deflected = true;
-          rock.deflectorHits = 0;
-          addBurst(rock.x, rock.y, "#8ff0b2", 14);
-        } else {
-          rock.vx += impulse.x * 55;
-          rock.vy += impulse.y * 55;
-          addBurst(rock.x, rock.y, "#aaa", 8);
-        }
+        rock.armorHits += 1;
+        rock.cracked = true;
+        state.shake = 0.18;
+        rock.vx += impulse.x * 80;
+        rock.vy += impulse.y * 80;
+        addBurst(rock.x, rock.y, "#ffcf70", 10);
       }
       return;
     }

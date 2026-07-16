@@ -46,7 +46,7 @@ function chooseShot(targetX, targetY) {
   const blasterLocked = Boolean(els.blasterBtn?.dataset.tutLocked);
   const deflectorLocked = Boolean(els.deflectorBtn?.dataset.tutLocked);
 
-  if (!blasterLocked && !state.blasterDisabled && state.blasterCooldown <= 0 && (state.selectedWeapon === "blaster" || moonBlocked)) {
+  if (!blasterLocked && !state.blasterDisabled && state.blasterCooldown <= 0 && moonBlocked) {
     if (state.friendlyFire || !lineIntersectsEarth(state.satellite, targetX, targetY, state.earth.r * 0.96)) {
       return { type: "blaster", origin: state.satellite };
     }
@@ -134,29 +134,6 @@ export function useStarnet() {
     rock.lastStarnetDistance = d;
     if (rock.starnetOrigin === "inside") destroyWithStarnet(rock);
   }
-}
-
-export function fireMoonLaser() {
-  const range = starnetRange();
-  let best = null;
-  let bestScore = -Infinity;
-
-  for (const rock of state.rocks) {
-    if (rock.cleared || rock.rockType === "healing" || rock.rockType === "boss") continue;
-    const d = Math.hypot(rock.x - state.earth.x, rock.y - state.earth.y);
-    if (d > range) continue;
-    const moonBlocked = moonBlockedForTarget(rock.x, rock.y) || lineIntersectsEarth(state.moon, rock.x, rock.y, state.earth.r * 0.92);
-    if (moonBlocked) continue;
-    const s = rockThreatScore(rock);
-    if (s > bestScore) { bestScore = s; best = rock; }
-  }
-
-  if (!best) return;
-
-  const dir = norm(best.x - state.moon.x, best.y - state.moon.y);
-  const origin = { x: state.moon.x + dir.x * state.moon.r, y: state.moon.y + dir.y * state.moon.r };
-  state.lasers.push({ x1: origin.x, y1: origin.y, x2: best.x, y2: best.y, life: 0.14, maxLife: 0.14, fromMoon: true });
-  hitRock(best, { x: origin.x, y: origin.y, vx: 0, vy: 0, type: "blaster" });
 }
 
 export function autoAttack(weaponType) {

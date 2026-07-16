@@ -6,7 +6,7 @@ import { resize, updateMoon, addEarthDamage, earthTexture } from "./world.js";
 import { resolveRockCollisions, integrateRock } from "./physics.js";
 import { spawnRock, spawnBoss, markArenaState, isOutsideArena, bounceFromMoon, clearRock, applyMagneticPull, applyStarnetField, hitRock, predictPath, updateCatastropheCompanions, spawnMagneticCompanions } from "./rocks.js";
 import { activateHazardEvent, deactivateHazardEvent } from "./hazards.js";
-import { shoot, fireLaser, useStarnet, applyBlasterHoming, fireMoonLaser, autoAttack } from "./weapons.js";
+import { shoot, fireLaser, useStarnet, applyBlasterHoming, autoAttack } from "./weapons.js";
 import { draw, addCometTrail, addBurst } from "./render.js";
 import { updateHud, selectWeapon, lockWeapon, unlockWeapon, lockAllWeapons } from "./hud.js";
 import { tutorialTick, startCombat, startRockTypes, tutEndStartMission, tutEndBackToTutorials, isInActiveTutorial, exitActiveTutorial } from "./tutorial.js";
@@ -67,7 +67,6 @@ export function resetGame() {
   state.blasterDisabled = false;
   state.bossActive = false;
   state.hazardBanner = null;
-  state.moonLaserClock = 0;
   state.autoAttackMode = AUTO_ATTACK_MODES[0];
   state.running = true;
   state.paused = false;
@@ -322,9 +321,7 @@ function update(dt) {
   state.spawnClock -= dt;
   state.starnetRingLife = Math.max(0, state.starnetRingLife - dt);
   if (state.starnetRingLife > 0) {
-    state.moonLaserClock = Math.max(0, state.moonLaserClock - dt);
-    if (state.moonLaserClock <= 0) { state.moonLaserClock = 0.5; fireMoonLaser(); }
-  }
+}
   state.shake = Math.max(0, state.shake - dt);
 
   for (const hit of state.impactMemory) hit.ttl -= dt;
@@ -494,8 +491,6 @@ els.exitBtn.addEventListener("click", () => {
   }
 });
 els.pauseBtn.addEventListener("click", togglePause);
-els.deflectorBtn.addEventListener("click", () => selectWeapon("deflector"));
-els.blasterBtn.addEventListener("click",   () => selectWeapon("blaster"));
 els.starnetBtn.addEventListener("click",   useStarnet);
 els.friendlyFireBtn.addEventListener("click", () => {
   state.friendlyFire = !state.friendlyFire;
@@ -505,15 +500,9 @@ els.friendlyFireBtn.addEventListener("click", () => {
   updateHud();
 });
 els.startBtn.addEventListener("click", resetGame);
-els.panelCloseBtn.addEventListener("click", resetGame);
 els.tutorialBtn.addEventListener("click", () => {
   els.overlay.classList.remove("show");
   els.tutorialSelectOverlay.classList.add("show");
-});
-els.tutSelCloseBtn.addEventListener("click", () => {
-  missionControl.silence();
-  els.tutorialSelectOverlay.classList.remove("show");
-  els.overlay.classList.add("show");
 });
 els.tutSelBackBtn.addEventListener("click", () => {
   missionControl.silence();
@@ -542,11 +531,6 @@ els.tutRocksBtn.addEventListener("click", () => {
   els.tutorialSelectOverlay.classList.remove("show");
   els.rockEntryScreen.classList.add("show");
 });
-els.rockEntryCloseBtn.addEventListener("click", () => {
-  missionControl.silence();
-  els.rockEntryScreen.classList.remove("show");
-  els.overlay.classList.add("show");
-});
 els.rockEntryBackBtn.addEventListener("click", () => {
   missionControl.silence();
   els.rockEntryScreen.classList.remove("show");
@@ -557,7 +541,6 @@ document.querySelectorAll(".rock-entry-btn").forEach(btn => {
     startRockTypes(btn.dataset.rock);
   });
 });
-els.tutCloseBtn.addEventListener("click",  () => { els.tutorialOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 els.tutBackBtn.addEventListener("click",   () => { els.tutorialOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 els.tutPlayBtn.addEventListener("click",   () => { els.tutorialOverlay.classList.remove("show"); resetGame(); });
 els.prefsBtn.addEventListener("click", () => {
@@ -566,7 +549,6 @@ els.prefsBtn.addEventListener("click", () => {
   els.overlay.classList.remove("show");
   els.prefsOverlay.classList.add("show");
 });
-els.prefsCloseBtn.addEventListener("click", () => { els.prefsOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 els.prefsBackBtn.addEventListener("click",  () => { els.prefsOverlay.classList.remove("show"); els.overlay.classList.add("show"); });
 document.querySelectorAll(".sat-btn").forEach(btn => {
   btn.addEventListener("click", () => {
@@ -582,16 +564,14 @@ function cycleAutoMode() {
   state.autoAttackMode = AUTO_ATTACK_MODES[(idx + 1) % AUTO_ATTACK_MODES.length];
   const label = AUTO_ATTACK_LABELS[state.autoAttackMode];
   els.autoModeLabel.textContent = label;
-  els.targetLabel.textContent = label;
 }
 els.autoModeBtn.addEventListener("click", cycleAutoMode);
-els.targetBtn.addEventListener("click", cycleAutoMode);
 window.addEventListener("keydown", (event) => {
   if (event.key === "1" || event.code === "Numpad1") {
-    if (!els.deflectorBtn.dataset.tutLocked) { selectWeapon("deflector"); autoAttack("deflector"); }
+    if (!els.deflectorBtn.dataset.tutLocked) { autoAttack("deflector"); }
   }
   if (event.key === "2" || event.code === "Numpad2") {
-    if (!els.blasterBtn.dataset.tutLocked) { selectWeapon("blaster"); autoAttack("blaster"); }
+    if (!els.blasterBtn.dataset.tutLocked) { autoAttack("blaster"); }
   }
   if (event.key === "3" || event.key.toLowerCase() === "s" || event.code === "Numpad3") {
     if (!els.starnetBtn.dataset.tutLocked) useStarnet();
@@ -609,7 +589,6 @@ window.addEventListener("keydown", (event) => {
 document.addEventListener("fullscreenchange", updateFullscreenIcons);
 
 els.autoModeLabel.textContent = AUTO_ATTACK_LABELS[state.autoAttackMode];
-els.targetLabel.textContent   = AUTO_ATTACK_LABELS[state.autoAttackMode];
 els.friendlyFireState.textContent = state.friendlyFire ? "On" : "Off";
 els.friendlyFireBtn.classList.toggle("on",  state.friendlyFire);
 els.friendlyFireBtn.classList.toggle("off", !state.friendlyFire);

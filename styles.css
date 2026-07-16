@@ -645,6 +645,15 @@ button {
   background: rgba(255, 255, 255, 0.08);
   color: var(--text);
 }
+.tut-header .panel-fs-btn {
+  position: static;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  padding: 0;
+}
 
 .tut-body {
   flex: 1;
@@ -925,6 +934,10 @@ kbd {
   font-weight: 700;
   text-shadow: 0 0 8px rgba(255, 220, 80, 0.5);
 }
+.mc-typing {
+  color: #fff;
+  text-shadow: 0 0 8px rgba(114, 230, 255, 0.55);
+}
 
 /* ── Rock entry nav ── */
 .rock-entry-nav {
@@ -1054,6 +1067,35 @@ kbd {
   z-index: 2;
 }
 .panel-fs-btn:hover { color: var(--text); border-color: var(--cyan); }
+
+/* Fullscreen button inside the cyan panel-header (home screen) */
+.panel-header .panel-fs-btn {
+  position: static;
+  color: #031019;
+  border-color: rgba(3, 16, 25, 0.35);
+  border-width: 2px;
+  border-radius: 50%;
+  padding: 0;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+}
+.panel-header .panel-fs-btn:hover {
+  background: rgba(3, 16, 25, 0.12);
+  border-color: rgba(3, 16, 25, 0.6);
+  color: #031019;
+}
+/* Standalone fs button sitting over a cyan panel-header (e.g. nameModal) */
+.panel:has(.panel-header) > .panel-fs-btn {
+  color: #031019;
+  border-color: rgba(3, 16, 25, 0.35);
+}
+.panel:has(.panel-header) > .panel-fs-btn:hover {
+  background: rgba(3, 16, 25, 0.12);
+  border-color: rgba(3, 16, 25, 0.6);
+  color: #031019;
+}
 
 .end-score {
   font-size: 22px;

@@ -1,6 +1,6 @@
 import { els } from "./state.js";
 
-const TYPEWRITER_SPEED = 30;
+const TYPEWRITER_SPEED = 70;
 
 let typewriterTimer = null;
 let hideTimer = null;
@@ -39,7 +39,9 @@ export const missionControl = {
 
     let i = 0;
     typewriterTimer = setInterval(() => {
-      textEl.textContent = plain.slice(0, ++i);
+      ++i;
+      const typed = plain.slice(0, i).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      textEl.innerHTML = `<span class="mc-typing">${typed}</span>`;
       if (i >= plain.length) {
         clearInterval(typewriterTimer);
         typewriterTimer = null;
