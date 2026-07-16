@@ -374,10 +374,7 @@ export function hitRock(rock, projectile) {
         rock.armorHits += 1;
         rock.cracked = true;
         state.shake = 0.22;
-        rock.vx += impulse.x * 130;
-        rock.vy += impulse.y * 130;
         addBurst(rock.x, rock.y, "#ffcf70", 16);
-        state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 8, text: "CRACKED!", life: 1.3, maxLife: 1.3, vy: -45, color: "#ffcf70" });
       }
       return;
     }
@@ -388,7 +385,6 @@ export function hitRock(rock, projectile) {
       rock.cracked = true;
       state.shake = 0.22;
       addBurst(rock.x, rock.y, "#ffcf70", 16);
-      state.floatingTexts.push({ x: rock.x, y: rock.y - rock.r - 8, text: "CRACKED!", life: 1.3, maxLife: 1.3, vy: -45, color: "#ffcf70" });
     }
     return;
   }
