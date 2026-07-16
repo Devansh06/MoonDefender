@@ -374,7 +374,13 @@ export function hitRock(rock, projectile) {
         rock.armorHits += 1;
         rock.cracked = true;
         state.shake = 0.22;
+        rock.vx += impulse.x * 130;
+        rock.vy += impulse.y * 130;
         addBurst(rock.x, rock.y, "#ffcf70", 16);
+        const speed = Math.hypot(projectile.vx, projectile.vy);
+        projectile.vx = -impulse.x * speed;
+        projectile.vy = -impulse.y * speed;
+        projectile.bounced = true;
       }
       return;
     }

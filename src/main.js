@@ -401,8 +401,10 @@ function update(dt) {
           addBurst(rock.x, rock.y, "#b060ff", 12);
         } else {
           hitRock(rock, projectile);
-          projectile.hit = true;
-          projectile.life = -1;
+          if (!projectile.bounced) {
+            projectile.hit = true;
+            projectile.life = -1;
+          }
         }
         break;
       }
