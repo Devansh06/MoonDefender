@@ -569,6 +569,7 @@ function cycleAutoMode() {
 }
 els.autoModeBtn.addEventListener("click", cycleAutoMode);
 window.addEventListener("keydown", (event) => {
+  if (event.target.tagName === "INPUT" || event.target.tagName === "TEXTAREA") return;
   if (event.key === "1" || event.code === "Numpad1") {
     if (!els.deflectorBtn.dataset.tutLocked) { autoAttack("deflector"); }
   }
