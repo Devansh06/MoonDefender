@@ -14,7 +14,8 @@ function plainText(text) {
 function richHtml(text) {
   return text
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\n/g, "<br>");
 }
 
 export const missionControl = {
@@ -40,7 +41,7 @@ export const missionControl = {
     let i = 0;
     typewriterTimer = setInterval(() => {
       ++i;
-      const typed = plain.slice(0, i).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const typed = plain.slice(0, i).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br>");
       textEl.innerHTML = `<span class="mc-typing">${typed}</span>`;
       if (i >= plain.length) {
         clearInterval(typewriterTimer);

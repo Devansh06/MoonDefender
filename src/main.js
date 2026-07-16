@@ -97,7 +97,8 @@ export function setTutorialMode(on) {
   }
 }
 
-export function spawnScriptedRock(type, angleOverride, slow = false) {
+export function spawnScriptedRock(type, angleOverride, slow = false, levelOverride = null, fullSpeed = false) {
+  const level = type === "boss" ? 5 : (levelOverride ?? 2);
   const angle = angleOverride !== undefined ? angleOverride : Math.random() * Math.PI * 2;
   const side = Math.cos(angle) < 0 ? -1 : 1;
   const margin = type === "boss" ? state.earth.r * 0.22 : 34;
@@ -123,15 +124,15 @@ export function spawnScriptedRock(type, angleOverride, slow = false) {
     ? { x: state.earth.x - side * state.earth.r * 0.38, y: state.earth.y + Math.sin(angle) * state.earth.r * 0.24 }
     : state.earth;
   const targetAngle = Math.atan2(target.y - pos.y, target.x - pos.x);
-  const speedMult = state.tutorialMode ? (slow ? 0.24 : 0.36) : (slow ? 0.45 : 1);
+  const speedMult = fullSpeed ? 1 : (state.tutorialMode ? (slow ? 0.24 : 0.36) : (slow ? 0.45 : 1));
   const speed = (type === "comet" ? 140 : 92) * speedMult;
-  const r = type === "comet" ? 8 : type === "healing" ? 14 : type === "magnetic" ? 19 : 15;
+  const r = type === "comet" ? 8 : type === "healing" ? 10 + level * 2 : type === "magnetic" ? 19 : 7 + level * 4;
 
   const rock = {
     x: pos.x, y: pos.y,
     vx: Math.cos(targetAngle) * speed,
     vy: Math.sin(targetAngle) * speed,
-    level: type === "boss" ? 5 : 2,
+    level,
     rockType: type,
     breakCount: 0, r,
     seed: Math.random() * 999,
