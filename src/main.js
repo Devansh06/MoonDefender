@@ -461,15 +461,21 @@ function frame(now) {
 }
 
 function toggleFullscreen() {
-  if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
-  else document.exitFullscreen().catch(() => {});
+  const el = document.documentElement;
+  const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  if (!isFs) {
+    (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el).catch(() => {});
+  } else {
+    (document.exitFullscreen || document.webkitExitFullscreen)?.call(document).catch(() => {});
+  }
 }
 
 const FS_EXPAND = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>`;
 const FS_COMPRESS = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3v3a2 2 0 0 1-2 2H3"/><path d="M21 8h-3a2 2 0 0 1-2-2V3"/><path d="M3 16h3a2 2 0 0 1 2 2v3"/><path d="M16 21v-3a2 2 0 0 1 2-2h3"/></svg>`;
 
 function updateFullscreenIcons() {
-  const icon = document.fullscreenElement ? FS_COMPRESS : FS_EXPAND;
+  const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  const icon = isFs ? FS_COMPRESS : FS_EXPAND;
   if (els.fullscreenHudBtn) els.fullscreenHudBtn.innerHTML = icon;
   document.querySelectorAll(".panel-fs-btn").forEach(btn => { btn.innerHTML = icon; });
 }
@@ -591,6 +597,7 @@ window.addEventListener("keydown", (event) => {
   }
 });
 document.addEventListener("fullscreenchange", updateFullscreenIcons);
+document.addEventListener("webkitfullscreenchange", updateFullscreenIcons);
 
 els.autoModeLabel.textContent = AUTO_ATTACK_LABELS[state.autoAttackMode];
 els.friendlyFireState.textContent = state.friendlyFire ? "On" : "Off";
