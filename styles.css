@@ -52,7 +52,7 @@ button {
 }
 
 .top-hud {
-  left: clamp(10px, 1.8vw, 18px);
+  left: max(env(safe-area-inset-left, 0px), clamp(10px, 1.8vw, 18px));
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -63,7 +63,7 @@ button {
 
 .weapon-panel {
   position: absolute;
-  right: clamp(10px, 1.8vw, 18px);
+  right: max(env(safe-area-inset-right, 0px), clamp(10px, 1.8vw, 18px));
   top: 50%;
   transform: translateY(-50%);
   z-index: 2;
@@ -909,7 +909,7 @@ kbd {
 /* ── Mission Control bubble ── */
 .mc-bubble {
   position: absolute;
-  top: clamp(52px, 10vh, 72px);
+  top: max(env(safe-area-inset-top, 0px), clamp(52px, 10vh, 72px));
   left: 50%;
   transform: translateX(-50%);
   z-index: 20;
@@ -1254,6 +1254,15 @@ kbd {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+/* ── Hide fullscreen controls when running as installed PWA / APK ── */
+@media (display-mode: fullscreen), (display-mode: standalone) {
+  .panel-fs-btn,
+  #fullscreenHudBtn,
+  #endFullscreenBtn {
+    display: none !important;
+  }
 }
 
 /* ── Portrait orientation blocker ── */
