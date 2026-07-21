@@ -15,6 +15,8 @@ export function resize() {
   ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
   canvas.style.width  = state.w + 'px';
   canvas.style.height = state.h + 'px';
+  const shell = canvas.closest('.game-shell');
+  if (shell) { shell.style.width = state.w + 'px'; shell.style.height = state.h + 'px'; }
 
   const shortSide = Math.min(state.w, state.h);
   state.earth = {

@@ -481,6 +481,7 @@ function updateFullscreenIcons() {
 }
 
 window.addEventListener("resize", resize);
+if (window.visualViewport) window.visualViewport.addEventListener("resize", resize);
 shell.addEventListener("pointerdown", (event) => {
   if (event.target.closest("button") || els.overlay.classList.contains("show") || document.getElementById("endScreen")?.classList.contains("show") || els.confirmExitOverlay.classList.contains("show")) return;
   const dx = event.clientX - state.earth.x;
