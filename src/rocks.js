@@ -37,7 +37,11 @@ export function spawnRock(forcedLevel, forcedType) {
       : { x: state.earth.x + rand(-state.moon.orbit * 0.62, state.moon.orbit * 0.62), y: state.earth.y + rand(-state.moon.orbit * 0.62, state.moon.orbit * 0.62) };
     targetAngle = Math.atan2(target.y - pos.y, target.x - pos.x) + rand(-0.14, 0.14);
   } else {
-    const angle = rand(0, TAU);
+    let angle;
+    do { angle = rand(0, TAU); } while (
+      (angle > Math.PI * 3 / 8 && angle < Math.PI * 5 / 8) ||
+      (angle > Math.PI * 11 / 8 && angle < Math.PI * 13 / 8)
+    );
     const dir = { x: Math.cos(angle), y: Math.sin(angle) };
     const margin = 24;
     const candidates = [];

@@ -5,16 +5,22 @@ const TYPEWRITER_SPEED = 70;
 let typewriterTimer = null;
 let hideTimer = null;
 
-// Strip **bold** markup to plain text for typewriter reveal
+// Strip **bold** and {#color:text} markup to plain text for typewriter reveal
 function plainText(text) {
-  return text.replace(/\*\*(.*?)\*\*/g, "$1");
+  return text
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\{[^:}]+:([^}]+)\}/g, "$1");
 }
 
-// Convert **bold** to <strong> for final render (XSS-safe: only ** markup allowed)
+// Convert **bold** and {#color:text} to HTML for final render (XSS-safe: only ** and {color:} markup allowed)
+// Weapon keyword colors applied first so they nest cleanly inside bold and explicit color spans.
 function richHtml(text) {
   return text
+    .replace(/\b(blast(?:s|er|ers?|ed|ing)?)\b/gi, '{#ffcf70:$1}')
+    .replace(/\b(deflect(?:or|ors?|s|ed|ing|ions?)?)\b/gi, '{#d2ffe1:$1}')
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
-    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/\*\*(.*?)\*\*/g, '<strong style="color:#f5e4a0">$1</strong>')
+    .replace(/\{([^:}]+):([^}]+)\}/g, '<span style="color:$1">$2</span>')
     .replace(/\n/g, "<br>");
 }
 
@@ -36,7 +42,7 @@ export const missionControl = {
 
     const plain = plainText(text);
     const words = plain.split(/\s+/).length;
-    const readDelay = Math.max(1500, words * 350);
+    const readDelay = plain.split("\n").length * 1000;
 
     let i = 0;
     typewriterTimer = setInterval(() => {

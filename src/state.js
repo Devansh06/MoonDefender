@@ -24,6 +24,8 @@ export const els = {
   tutSelBackBtn:         document.getElementById("tutSelBackBtn"),
   tutEndScreen:        document.getElementById("tutEndScreen"),
   tutEndStartBtn:      document.getElementById("tutEndStartBtn"),
+  tutEndRocksBtn:      document.getElementById("tutEndRocksBtn"),
+  tutEndHowToPlayBtn:  document.getElementById("tutEndHowToPlayBtn"),
   tutEndBackBtn:       document.getElementById("tutEndBackBtn"),
   rockEntryScreen:     document.getElementById("rockEntryScreen"),
   rockEntryBackBtn:    document.getElementById("rockEntryBackBtn"),
@@ -79,6 +81,7 @@ export const state = {
   bossActive: false,
   // tutorial
   tutorialMode: false,
+  blasterOffline: false,
   // player identity
   playerName: "",
   playerIP: "",

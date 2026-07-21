@@ -9,7 +9,7 @@ import { activateHazardEvent, deactivateHazardEvent } from "./hazards.js";
 import { shoot, fireLaser, useStarnet, applyBlasterHoming, autoAttack } from "./weapons.js";
 import { draw, addCometTrail, addBurst } from "./render.js";
 import { updateHud, selectWeapon, lockWeapon, unlockWeapon, lockAllWeapons } from "./hud.js";
-import { tutorialTick, startCombat, startRockTypes, tutEndStartMission, tutEndBackToTutorials, isInActiveTutorial, exitActiveTutorial } from "./tutorial.js";
+import { tutorialTick, startCombat, startRockTypes, tutEndStartMission, tutEndGoToRocks, tutEndGoToHowToPlay, tutEndBackToTutorials, isInActiveTutorial, exitActiveTutorial } from "./tutorial.js";
 import { missionControl } from "./mission-control.js";
 
 function buildHazardSchedule() {
@@ -101,7 +101,7 @@ export function spawnScriptedRock(type, angleOverride, slow = false, levelOverri
   const level = type === "boss" ? 5 : (levelOverride ?? 2);
   const angle = angleOverride !== undefined ? angleOverride : Math.random() * Math.PI * 2;
   const side = Math.cos(angle) < 0 ? -1 : 1;
-  const margin = type === "boss" ? state.earth.r * 0.22 : 34;
+  const margin = type === "boss" ? state.earth.r * 0.22 : (state.tutorialMode ? 120 : 34);
   const pos = state.tutorialMode
     ? {
         x: side < 0 ? -margin : state.w + margin,
@@ -530,6 +530,14 @@ els.tutCombatBtn.addEventListener("click", () => {
 
 // Tutorial end screen
 els.tutEndStartBtn.addEventListener("click", tutEndStartMission);
+els.tutEndRocksBtn.addEventListener("click", () => {
+  missionControl.silence();
+  tutEndGoToRocks();
+});
+els.tutEndHowToPlayBtn.addEventListener("click", () => {
+  missionControl.silence();
+  tutEndGoToHowToPlay();
+});
 els.tutEndBackBtn.addEventListener("click", () => {
   missionControl.silence();
   tutEndBackToTutorials();

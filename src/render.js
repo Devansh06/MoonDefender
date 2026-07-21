@@ -320,9 +320,14 @@ function drawSatellite() {
   ctx.save();
   ctx.translate(state.satellite.x, state.satellite.y);
   ctx.rotate(state.satellite.angle + Math.PI / 2);
-  ctx.shadowColor = state.blasterDisabled ? "#ff5032" : "#ffcf70";
-  ctx.shadowBlur = state.blasterDisabled ? 6 : state.blasterCooldown <= 0 ? 16 : 4;
-  ctx.fillStyle = state.blasterDisabled ? "#cc9988" : "#dfe8ef";
+  if (state.blasterOffline) {
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#707070";
+  } else {
+    ctx.shadowColor = state.blasterDisabled ? "#ff5032" : "#ffcf70";
+    ctx.shadowBlur = state.blasterDisabled ? 6 : state.blasterCooldown <= 0 ? 16 : 4;
+    ctx.fillStyle = state.blasterDisabled ? "#cc9988" : "#dfe8ef";
+  }
   ctx.strokeStyle = "rgba(255,255,255,0.55)";
   ctx.lineWidth = 1.5;
   ctx.fillRect(-state.satellite.r * 0.55, -state.satellite.r * 0.55, state.satellite.r * 1.1, state.satellite.r * 1.1);
@@ -332,7 +337,17 @@ function drawSatellite() {
   ctx.fillRect(state.satellite.r * 0.95, -state.satellite.r * 0.35, state.satellite.r * 1.45, state.satellite.r * 0.7);
   ctx.restore();
 
-  if (!state.blasterDisabled) {
+  if (state.blasterOffline) {
+    const ringR = state.satellite.r * 2.6;
+    ctx.save();
+    ctx.translate(state.satellite.x, state.satellite.y);
+    ctx.beginPath();
+    ctx.arc(0, 0, ringR, 0, TAU);
+    ctx.strokeStyle = "rgba(100,100,100,0.35)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+    ctx.restore();
+  } else if (!state.blasterDisabled) {
     const frac = state.blasterCooldown <= 0 ? 1 : 1 - state.blasterCooldown / BLASTER_REFILL;
     const ringR = state.satellite.r * 2.6;
     ctx.save();

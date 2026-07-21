@@ -25,7 +25,7 @@ export function lockWeapon(name) {
   const btn = name === "deflector" ? els.deflectorBtn
             : name === "blaster"   ? els.blasterBtn
             : name === "starnet"   ? els.starnetBtn : null;
-  if (btn) { btn.disabled = true; btn.dataset.tutLocked = "1"; }
+  if (btn) { btn.disabled = true; btn.dataset.tutLocked = "1"; btn.classList.remove("ready"); }
 }
 
 export function unlockWeapon(name) {

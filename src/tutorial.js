@@ -9,6 +9,9 @@ let currentStep = -1;
 let tutorialClock = 0;
 let prevHitsCleared = 0;
 let prevStarnetId = 0;
+let tapEarthSaid = false;
+let bigRockSeen = false;
+let bigRockLastSeen = -Infinity;
 const TUTORIAL_TIMEOUT = 10;
 
 function setTutorialWeapons(enabled) {
@@ -33,6 +36,7 @@ export function exitActiveTutorial() {
   setTutorialMode(false);
   state.running = false;
   state.bossActive = false;
+  state.blasterOffline = false;
   state.rocks = [];
   state.projectiles = [];
   state.particles = [];
@@ -107,6 +111,7 @@ function initTutorialState() {
 
 export function startCombat() {
   initTutorialState();
+  state.blasterOffline = true;
   setTutorialWeapons(["deflector"]);
   selectWeapon("deflector");
   els.tutorialSelectOverlay.classList.remove("show");
@@ -120,7 +125,7 @@ const COMBAT_STEPS = [
   // ★ cinematic
   {
     enter() {
-      missionControl.speak("This is Mission Control.\nWe've picked up a hostile approach vector.\nEarth is not ready. **You are.**");
+      missionControl.speak("This is Mission Control.\nWe've picked up an approaching hostile.\nEarth is not ready. **You are.**");
     },
     waitFor() { return true; },
   },
@@ -128,13 +133,18 @@ const COMBAT_STEPS = [
   {
     enter() {
       setTutorialWeapons(["deflector"]);
-      missionControl.speak("Rock inbound.\n**Tap** toward it — the Deflector fires a push-pulse.\nRedirect it.");
+      missionControl.speak("Rock inbound.\n**Tap** toward it — the Deflector fires a **push-pulse** from the moon.\nRedirect it.");
     },
     waitFor() { return true; },
   },
   {
     enter() { spawnScriptedRock("normal", Math.PI, false); },
-    waitFor() { return !state.rocks.some(r => !r.cleared) || tutorialClock > 25; },
+    waitFor() {
+      const r = state.rocks[0];
+      if (!r) return true;
+      if (r.deflected && (r.x < 0 || r.x > state.w || r.y < 0 || r.y > state.h)) return true;
+      return tutorialClock > 25;
+    },
     leave() { state.rocks = []; },
   },
   // 2: deflect rock 2
@@ -146,14 +156,19 @@ const COMBAT_STEPS = [
   },
   {
     enter() { spawnScriptedRock("normal", 0, false); },
-    waitFor() { return !state.rocks.some(r => !r.cleared) || tutorialClock > 25; },
+    waitFor() {
+      const r = state.rocks[0];
+      if (!r) return true;
+      if (r.deflected && (r.x < 0 || r.x > state.w || r.y < 0 || r.y > state.h)) return true;
+      return tutorialClock > 25;
+    },
     leave() { state.rocks = []; },
   },
   // 3: magnetic — watch deflector fail
   {
     enter() {
       setTutorialWeapons(["deflector"]);
-      missionControl.speak("Magnetic rock inbound.\nTry your **Deflector** — watch what happens.");
+      missionControl.speak("**{#c070ff:Magnetic rock}** inbound.\nTry your **Deflector** — watch what happens.");
     },
     waitFor() { return true; },
   },
@@ -165,8 +180,21 @@ const COMBAT_STEPS = [
   // 4: blaster lesson
   {
     enter() {
+      missionControl.speak("Deflector **bounces** off it.");
+    },
+    waitFor() { return true; },
+  },
+  {
+    enter() {
+      state.blasterOffline = false;
       setTutorialWeapons(["blaster"]);
-      missionControl.speak("**Deflector bounces off it.**\nSwitch to **Blaster** and destroy it.");
+      missionControl.speak("**Blaster is now online.**");
+    },
+    waitFor() { return true; },
+  },
+  {
+    enter() {
+      missionControl.speak("Blaster shoots a laser pulse. Try tapping towards **{#c070ff:Magnetic Rock}** now.");
     },
     waitFor() { return true; },
   },
@@ -177,11 +205,17 @@ const COMBAT_STEPS = [
     },
     leave() { state.rocks = state.rocks.filter(r => r.rockType !== "magnetic"); },
   },
+  {
+    enter() {
+      missionControl.speak("Blaster has a **1.5s cooldown**.\nIt glows when active.");
+    },
+    waitFor() { return true; },
+  },
   // 5: Starnet intro
   {
     enter() {
       setTutorialWeapons(["starnet"]);
-      missionControl.speak("**Starnet** is now available.");
+      missionControl.speak("**{#72e6ff:Starnet}** is now available.");
     },
     waitFor() { return tutorialClock >= 2.5; },
   },
@@ -190,19 +224,23 @@ const COMBAT_STEPS = [
     enter() {
       setTutorialWeapons(["starnet"]);
       prevStarnetId = state.starnetActivationId;
-      missionControl.speak("Four contacts — too many to pick off.\n**Starnet** deploys a full ring shield.\n**Tap Earth** to activate.");
+      missionControl.speak("Four contacts — too many to pick off.\n**{#72e6ff:Starnet}** deploys a full ring shield.\n**Tap Earth** to activate.");
     },
     waitFor() { return true; },
   },
   {
     enter() {
-      [Math.PI, 0, Math.PI * 1.08, Math.PI * 0.08].forEach(a => spawnScriptedRock("normal", a, true));
+      [Math.PI * 0.75, Math.PI * 1.25, Math.PI * 0.25, Math.PI * 1.75].forEach(a => spawnScriptedRock("normal", a, false, null, true));
     },
     waitFor() {
+      if (tutorialClock >= 3 && !tapEarthSaid) {
+        tapEarthSaid = true;
+        missionControl.speak("Tap on Earth, now.");
+      }
       return (state.starnetActivationId > prevStarnetId && state.starnetRingLife <= 0 && !state.rocks.some(r => !r.cleared))
         || tutorialClock > 25;
     },
-    leave() { state.rocks = []; },
+    leave() { tapEarthSaid = false; state.rocks = []; },
   },
   // post-starnet info
   {
@@ -223,6 +261,7 @@ const COMBAT_STEPS = [
 function showTutorialEndScreen() {
   missionControl.silence();
   setTutorialMode(false);
+  state.blasterOffline = false;
   pauseNormalSpawning();
   els.tutEndScreen?.classList.add("show");
 }
@@ -233,6 +272,26 @@ export function tutEndStartMission() {
   resetGame();
 }
 
+export function tutEndGoToRocks() {
+  els.tutEndScreen?.classList.remove("show");
+  setTutorialMode(false);
+  state.running = false;
+  state.rocks = [];
+  state.projectiles = [];
+  state.particles = [];
+  els.rockEntryScreen.classList.add("show");
+}
+
+export function tutEndGoToHowToPlay() {
+  els.tutEndScreen?.classList.remove("show");
+  setTutorialMode(false);
+  state.running = false;
+  state.rocks = [];
+  state.projectiles = [];
+  state.particles = [];
+  els.tutorialOverlay.classList.add("show");
+}
+
 export function tutEndBackToTutorials() {
   els.tutEndScreen?.classList.remove("show");
   setTutorialMode(false);
@@ -240,7 +299,7 @@ export function tutEndBackToTutorials() {
   state.rocks = [];
   state.projectiles = [];
   state.particles = [];
-  els.tutorialSelectOverlay.classList.add("show");
+  els.overlay.classList.add("show");
 }
 
 // ─── ROCK TYPES TUTORIAL ─────────────────────────────────────────────────────
@@ -276,25 +335,40 @@ const ROCK_TYPE_STEPS = {
   normal: [
     {
       enter() {
-        missionControl.speak("Normal rock inbound.\nSmall ones go down in **one hit**.\nBigger ones **split into fragments** when hit.");
+        missionControl.speak("**{#9eb3c6:Normal rock}** inbound.\nSmall ones go down in **one hit**.");
       },
       waitFor() { return true; },
     },
     {
-      enter() { spawnScriptedRock("normal", Math.PI * 0.75, false); },
+      enter() { spawnScriptedRock("normal", Math.PI * 0.75, false, null, true); },
       waitFor() { return noActiveRock("normal") || tutorialClock > ROCK_TYPE_TIMEOUT; },
       leave() { state.rocks = []; },
     },
     {
-      enter() { spawnScriptedRock("normal", Math.PI * 0.2, false, 3); },
-      waitFor() { return noActiveRock("normal") || tutorialClock > ROCK_TYPE_TIMEOUT; },
-      leave() { state.rocks = []; },
+      enter() {
+        missionControl.speak("Bigger ones **split into fragments** when hit by Blaster.");
+      },
+      waitFor() { return true; },
+    },
+    {
+      enter() {
+        bigRockSeen = false;
+        bigRockLastSeen = -Infinity;
+        const fromRight = state.satellite.x > state.earth.x;
+        spawnScriptedRock("normal", fromRight ? Math.PI * 0.2 : Math.PI * 0.8, false, 3, true);
+      },
+      waitFor() {
+        const n = state.rocks.filter(r => r.rockType === "normal").length;
+        if (n > 0) { bigRockSeen = true; bigRockLastSeen = tutorialClock; }
+        return (bigRockSeen && n === 0 && tutorialClock - bigRockLastSeen > 0.15) || tutorialClock > ROCK_TYPE_TIMEOUT;
+      },
+      leave() { bigRockSeen = false; bigRockLastSeen = -Infinity; state.rocks = []; },
     },
   ],
   comet: [
     {
       enter() {
-        missionControl.speak("Comet inbound. **Three times** normal speed.\nFragile: **one hit** drops it.\nWorth **+150 bonus pts**.");
+        missionControl.speak("**{#88eeff:Comet}** inbound. **Three times** normal speed.\nFragile: **one hit** drops it.\nWorth **+150 bonus pts**.");
       },
       waitFor() { return true; },
     },
@@ -307,12 +381,12 @@ const ROCK_TYPE_STEPS = {
   armored: [
     {
       enter() {
-        missionControl.speak("Armored rock inbound.\n**Deflector or Blaster** cracks the armor on the first hit.\nThen **Deflect** to redirect, or **Blast again** to destroy it.");
+        missionControl.speak("**{#c8c8b4:Armored rock}** inbound.\n**Deflector or Blaster** cracks the armor on the first hit.\nThen **Deflect** to redirect, or **Blast again** to destroy it.");
       },
       waitFor() { return true; },
     },
     {
-      enter() { spawnScriptedRock("armored", Math.PI * 1.25, false); },
+      enter() { spawnScriptedRock("armored", Math.PI * 1.25, false, null, true); },
       waitFor() { return noActiveRock("armored") || tutorialClock > ROCK_TYPE_TIMEOUT; },
       leave() { state.rocks = []; },
     },
@@ -320,12 +394,12 @@ const ROCK_TYPE_STEPS = {
   magnetic: [
     {
       enter() {
-        missionControl.speak("Magnetic rock inbound.\nThat dotted ring is a gravity well.\n**Blast it** or use **Starnet** — Deflectors will not stop the pull.");
+        missionControl.speak("**{#c070ff:Magnetic rock}** inbound.\nThat dotted ring is a gravity well.\n**Blast it** or use **{#72e6ff:Starnet}** — Deflectors will not stop the pull.");
       },
       waitFor() { return true; },
     },
     {
-      enter() { spawnScriptedRock("magnetic", Math.PI * 1.0, false); },
+      enter() { spawnScriptedRock("magnetic", Math.PI * 1.0, false, null, true); },
       waitFor() { return noActiveRock("magnetic") || tutorialClock > ROCK_TYPE_TIMEOUT; },
       leave() { state.rocks = []; },
     },
@@ -333,12 +407,12 @@ const ROCK_TYPE_STEPS = {
   healing: [
     {
       enter() {
-        missionControl.speak("Healing rock inbound. This one's different.\n**Don't shoot it.**\nUse **Starnet** while it's inside the ring to capture it.");
+        missionControl.speak("**{#44ff88:Healing rock}** inbound. This one's different.\n**Don't shoot it.**\nUse **{#72e6ff:Starnet}** while it's inside the ring to capture it.");
       },
       waitFor() { return true; },
     },
     {
-      enter() { spawnScriptedRock("healing", Math.PI * 0.9, false); },
+      enter() { spawnScriptedRock("healing", Math.PI * 0.9, false, null, true); },
       waitFor() { return noActiveRock("healing") || tutorialClock > ROCK_TYPE_TIMEOUT; },
       leave() { state.rocks = []; },
     },
@@ -346,7 +420,7 @@ const ROCK_TYPE_STEPS = {
   catastrophe: [
     {
       enter() {
-        missionControl.speak("Catastrophe rock inbound. Three orbiting companions.\n**Two Blasts or Starnet hits** crack the shell. **One more** ends it.\n**Starnet on uncracked armor bounces back** — you've been warned.");
+        missionControl.speak("**{#cc44ff:Catastrophe rock}** inbound. Three orbiting companions.\n**Two Blasts or {#72e6ff:Starnet} hits** crack the shell. **One more** ends it.\n**{#72e6ff:Starnet} on uncracked armor bounces back** — you've been warned.");
       },
       waitFor() { return true; },
     },
