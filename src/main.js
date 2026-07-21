@@ -482,7 +482,7 @@ function updateFullscreenIcons() {
 
 window.addEventListener("resize", resize);
 shell.addEventListener("pointerdown", (event) => {
-  if (event.target.closest("button") || els.overlay.classList.contains("show") || document.getElementById("endScreen")?.classList.contains("show")) return;
+  if (event.target.closest("button") || els.overlay.classList.contains("show") || document.getElementById("endScreen")?.classList.contains("show") || els.confirmExitOverlay.classList.contains("show")) return;
   const dx = event.clientX - state.earth.x;
   const dy = event.clientY - state.earth.y;
   if (Math.hypot(dx, dy) < state.earth.r && state.running && !state.paused) {
@@ -491,7 +491,20 @@ shell.addEventListener("pointerdown", (event) => {
   }
   shoot(event.clientX, event.clientY);
 });
+let _exitWasPaused = false;
 els.exitBtn.addEventListener("click", () => {
+  if (!state.running && !isInActiveTutorial()) return;
+  _exitWasPaused = state.paused;
+  state.paused = true;
+  els.confirmExitOverlay.classList.add("show");
+});
+els.confirmResumeBtn.addEventListener("click", () => {
+  els.confirmExitOverlay.classList.remove("show");
+  state.paused = _exitWasPaused;
+});
+els.confirmAbandonBtn.addEventListener("click", () => {
+  els.confirmExitOverlay.classList.remove("show");
+  state.paused = false;
   missionControl.silence();
   if (isInActiveTutorial()) {
     exitActiveTutorial();

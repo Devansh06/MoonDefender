@@ -119,7 +119,7 @@ export function applyBlasterHoming(projectile, dt) {
 
 export function useStarnet() {
   if (els.starnetBtn?.dataset.tutLocked) return;
-  if (!state.running || state.starnet <= 0) return;
+  if (!state.running || state.starnet <= 0 || state.starnetRingLife > 0) return;
   state.starnet -= 1;
   state.starnetRingLife = 2;
   state.starnetActivationId += 1;
