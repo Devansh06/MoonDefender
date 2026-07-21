@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>Moon Defender</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -316,6 +316,23 @@
               <button id="tutEndRocksBtn"     class="nav-btn" type="button">Rock Types Guide</button>
               <button id="tutEndHowToPlayBtn" class="nav-btn" type="button">Game Guide</button>
               <button id="tutEndBackBtn"      class="nav-btn" type="button">&#8592; Main Menu</button>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      <!-- Exit confirmation dialog -->
+      <div id="confirmExitOverlay" class="overlay">
+        <div class="panel">
+          <div class="panel-header">
+            <button class="panel-fs-btn" type="button" title="Toggle fullscreen"></button>
+          </div>
+          <div class="panel-body" style="text-align:center">
+            <h2>Exit Mission?</h2>
+            <p style="color:var(--muted);margin:1rem 0 1.8rem">Abandoning now will end your current run.</p>
+            <nav class="panel-nav">
+              <button id="confirmResumeBtn"  class="nav-btn nav-primary" type="button">Resume Mission</button>
+              <button id="confirmAbandonBtn" class="nav-btn"             type="button">Abandon Mission</button>
             </nav>
           </div>
         </div>

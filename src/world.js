@@ -13,12 +13,14 @@ export function resize() {
   canvas.width = Math.floor(state.w * state.dpr);
   canvas.height = Math.floor(state.h * state.dpr);
   ctx.setTransform(state.dpr, 0, 0, state.dpr, 0, 0);
+  canvas.style.width  = state.w + 'px';
+  canvas.style.height = state.h + 'px';
 
   const shortSide = Math.min(state.w, state.h);
   state.earth = {
     x: state.w * 0.5,
     y: state.h * 0.52,
-    r: clamp(shortSide * 0.21, 96, 190),
+    r: Math.min(shortSide * 0.17, 190),
   };
   state.moon = {
     orbit: state.earth.r * 1.82,
