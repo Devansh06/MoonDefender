@@ -12,6 +12,7 @@ let prevStarnetId = 0;
 let tapEarthSaid = false;
 let bigRockSeen = false;
 let bigRockLastSeen = -Infinity;
+let _tutBlasterSide = null; // 'right'|'left', set in blaster-message step so spawn step agrees
 const TUTORIAL_TIMEOUT = 10;
 
 function setTutorialWeapons(enabled) {
@@ -138,7 +139,11 @@ const COMBAT_STEPS = [
     waitFor() { return true; },
   },
   {
-    enter() { spawnScriptedRock("normal", Math.PI, false); },
+    // Spawn from whichever side the moon is approaching so the deflector can reach it
+    enter() {
+      const moonInNorth = state.moon.y < state.earth.y;
+      spawnScriptedRock("normal", moonInNorth ? 0 : Math.PI, false);
+    },
     waitFor() {
       const r = state.rocks[0];
       if (!r) return true;
@@ -155,7 +160,11 @@ const COMBAT_STEPS = [
     waitFor() { return true; },
   },
   {
-    enter() { spawnScriptedRock("normal", 0, false); },
+    // Same approaching side but diagonal so it's visually "different angle"
+    enter() {
+      const moonInNorth = state.moon.y < state.earth.y;
+      spawnScriptedRock("normal", moonInNorth ? -Math.PI * 0.25 : Math.PI * 1.25, false);
+    },
     waitFor() {
       const r = state.rocks[0];
       if (!r) return true;
@@ -173,7 +182,11 @@ const COMBAT_STEPS = [
     waitFor() { return true; },
   },
   {
-    enter() { spawnScriptedRock("magnetic", Math.PI, false); },
+    // Spawn from approaching moon side so user can actually attempt the deflect
+    enter() {
+      const moonInNorth = state.moon.y < state.earth.y;
+      spawnScriptedRock("magnetic", moonInNorth ? 0 : Math.PI, false);
+    },
     waitFor() { return !state.rocks.some(r => !r.cleared && r.rockType === "magnetic") || tutorialClock > 25; },
     leave() { state.rocks = []; },
   },
@@ -187,23 +200,36 @@ const COMBAT_STEPS = [
   {
     enter() {
       state.blasterOffline = false;
-      setTutorialWeapons(["blaster"]);
+      setTutorialWeapons(["deflector", "blaster"]); // deflector stays available
       missionControl.speak("**Blaster is now online.**");
     },
     waitFor() { return true; },
   },
   {
+    // Determine sides now so MC message and spawn step agree
     enter() {
-      missionControl.speak("Blaster shoots a laser pulse. Try tapping towards **{#c070ff:Magnetic Rock}** now.");
+      const satInNorth = state.satellite.y < state.earth.y;
+      _tutBlasterSide = satInNorth ? "right" : "left";
+      const normSide   = satInNorth ? "left"  : "right";
+      missionControl.speak(`**{#c070ff:Magnetic cluster}** from the ${_tutBlasterSide}! Two rocks on the ${normSide}.\nBlast the **{#c070ff:magnetics}** — Deflect the normals.`);
     },
     waitFor() { return true; },
   },
   {
-    enter() { spawnScriptedRock("magnetic", Math.PI * 0.9, false); },
-    waitFor() {
-      return !state.rocks.some(r => !r.cleared && r.rockType === "magnetic") || tutorialClock > 25;
+    enter() {
+      const satInNorth = _tutBlasterSide === "right";
+      const magAngle  = satInNorth ? 0 : Math.PI;
+      const normAngle = satInNorth ? Math.PI : 0;
+      spawnScriptedRock("magnetic", magAngle, false);
+      spawnScriptedRock("magnetic", magAngle + (satInNorth ? 0.35 : -0.35), false);
+      spawnScriptedRock("normal",   normAngle, false);
+      spawnScriptedRock("normal",   normAngle + (satInNorth ? -0.35 : 0.35), false);
+      _tutBlasterSide = null;
     },
-    leave() { state.rocks = state.rocks.filter(r => r.rockType !== "magnetic"); },
+    waitFor() {
+      return !state.rocks.some(r => !r.cleared) || tutorialClock > 35;
+    },
+    leave() { state.rocks = []; },
   },
   {
     enter() {
@@ -211,10 +237,10 @@ const COMBAT_STEPS = [
     },
     waitFor() { return true; },
   },
-  // 5: Starnet intro
+  // 5: Starnet intro — all weapons remain available
   {
     enter() {
-      setTutorialWeapons(["starnet"]);
+      setTutorialWeapons(["deflector", "blaster", "starnet"]);
       missionControl.speak("**{#72e6ff:Starnet}** is now available.");
     },
     waitFor() { return tutorialClock >= 2.5; },
@@ -222,9 +248,9 @@ const COMBAT_STEPS = [
   // 6: 4 rocks
   {
     enter() {
-      setTutorialWeapons(["starnet"]);
+      setTutorialWeapons(["deflector", "blaster", "starnet"]);
       prevStarnetId = state.starnetActivationId;
-      missionControl.speak("Four contacts — too many to pick off.\n**{#72e6ff:Starnet}** deploys a full ring shield.\n**Tap Earth** to activate.");
+      missionControl.speak("Four contacts — too many to pick off.\n**{#72e6ff:Starnet}** deploys a full ring shield.\n**Tap Earth when the rocks are close.**");
     },
     waitFor() { return true; },
   },
