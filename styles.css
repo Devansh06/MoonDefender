@@ -225,6 +225,23 @@ button {
   opacity: 0.56;
 }
 
+.arena-loading {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 12%;
+  transform: translateX(-50%);
+  color: rgba(114, 230, 255, 0.55);
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  z-index: 5;
+  pointer-events: none;
+}
+
+.arena-loading.show {
+  display: block;
+}
+
 .overlay {
   position: absolute;
   inset: 0;

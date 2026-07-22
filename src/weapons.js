@@ -119,8 +119,13 @@ export function applyBlasterHoming(projectile, dt) {
 
 export function useStarnet() {
   if (els.starnetBtn?.dataset.tutLocked) return;
-  if (!state.running || state.starnet <= 0 || state.starnetRingLife > 0) return;
-  state.starnet -= 1;
+  if (!state.running) return;
+  // Allow early re-activation in the last 0.5s (1.5s after activation) at cost of 2 charges
+  const earlyReactivate = state.starnetRingLife > 0 && state.starnetRingLife <= 0.5;
+  if (state.starnetRingLife > 0.5) return; // still in first 1.5s window
+  const cost = earlyReactivate ? 2 : 1;
+  if (state.starnet < cost) return;
+  state.starnet -= cost;
   state.starnetRingLife = 2;
   state.starnetActivationId += 1;
   const range = starnetRange();

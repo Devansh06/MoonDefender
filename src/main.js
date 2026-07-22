@@ -672,6 +672,7 @@ els.friendlyFireBtn.classList.toggle("on",  state.friendlyFire);
 els.friendlyFireBtn.classList.toggle("off", !state.friendlyFire);
 resize();
 updateMoon(0);
+draw(); // Render one frame immediately so canvas never shows blank before first rAF
 updateFullscreenIcons();
 requestAnimationFrame(frame);
 
@@ -717,6 +718,15 @@ async function loadLeaderboard() {
   renderLbRows(rows, listEl);
 }
 
+const _arenaLoadingEl = document.getElementById("arenaLoading");
+async function loadLeaderboardAndShowOverlay() {
+  els.overlay.classList.remove("show");
+  _arenaLoadingEl?.classList.add("show");
+  await loadLeaderboard();
+  _arenaLoadingEl?.classList.remove("show");
+  els.overlay.classList.add("show");
+}
+
 // ── End-screen buttons ────────────────────────────────────────────────
 document.getElementById("endRestartBtn")?.addEventListener("click", () => {
   document.getElementById("endScreen")?.classList.remove("show");
@@ -724,8 +734,7 @@ document.getElementById("endRestartBtn")?.addEventListener("click", () => {
 });
 document.getElementById("endMenuBtn")?.addEventListener("click", () => {
   document.getElementById("endScreen")?.classList.remove("show");
-  els.overlay.classList.add("show");
-  loadLeaderboard();
+  loadLeaderboardAndShowOverlay();
 });
 document.getElementById("endLbBtn")?.addEventListener("click", () => {
   const lbEl   = document.getElementById("endLeaderboard");
@@ -778,16 +787,14 @@ async function confirmName() {
   storeName(name);
   applyName(name);
   nameModal.classList.remove("show");
-  els.overlay.classList.add("show");
-  loadLeaderboard();
+  loadLeaderboardAndShowOverlay();
 }
 
 nameConfirmBtn?.addEventListener("click", confirmName);
 nameSkipBtn?.addEventListener("click", () => {
   applyName("Guest");
   nameModal.classList.remove("show");
-  els.overlay.classList.add("show");
-  loadLeaderboard();
+  loadLeaderboardAndShowOverlay();
 });
 nameInput?.addEventListener("keydown", e => { if (e.key === "Enter") confirmName(); });
 nameInput?.addEventListener("input",   () => nameInput.classList.remove("input-error"));
@@ -798,9 +805,8 @@ getPlayerIP().then(ip => { state.playerIP = ip; });
 const storedName = getStoredName();
 if (storedName) {
   applyName(storedName);
-  loadLeaderboard();
+  loadLeaderboardAndShowOverlay();
 } else {
-  els.overlay.classList.remove("show");
   nameModal.classList.add("show");
   setTimeout(() => nameInput?.focus(), 80);
 }

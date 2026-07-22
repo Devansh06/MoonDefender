@@ -115,7 +115,7 @@ function drawStarnetRangeRing() {
   if (active) {
     const t = clamp(state.starnetRingLife / 2, 0, 1);
     ctx.save();
-    ctx.globalAlpha = 0.10 + t * 0.42;
+    ctx.globalAlpha = t * 0.52;
     ctx.shadowColor = "#72e6ff";
     ctx.shadowBlur = 28;
     ctx.strokeStyle = "#72e6ff";
