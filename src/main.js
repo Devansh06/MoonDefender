@@ -1,7 +1,7 @@
 import { LEVEL_TIME, TOTAL_LEVELS, BOSS_LEVELS, AUTO_ATTACK_MODES, AUTO_ATTACK_LABELS, ROCK_DAMAGE } from "./constants.js";
 import { rand, norm } from "./utils.js";
 import { els, canvas, shell, state } from "./state.js";
-import { isEnabled, getPlayerIP, getStoredName, storeName, fetchLeaderboard, submitScore, isMySub, checkNameAvailable } from "./leaderboard.js";
+import { isEnabled, getPlayerIP, getStoredName, storeName, fetchLeaderboard, submitScore, startSession, isMySub, checkNameAvailable } from "./leaderboard.js";
 import { resize, updateMoon, addEarthDamage, earthTexture } from "./world.js";
 import { resolveRockCollisions, integrateRock } from "./physics.js";
 import { spawnRock, spawnBoss, markArenaState, isOutsideArena, bounceFromMoon, clearRock, applyMagneticPull, applyStarnetField, hitRock, predictPath, updateCatastropheCompanions, spawnMagneticCompanions } from "./rocks.js";
@@ -70,6 +70,7 @@ export function resetGame() {
   state.levelTransitionClock = 0;
   state.hazardBanner = null;
   state.autoAttackMode = AUTO_ATTACK_MODES[0];
+  state.sessionId = null; // will be set async below
   state.running = true;
   state.paused = false;
   els.pauseBtn.innerHTML = "⏸︎";
@@ -82,6 +83,12 @@ export function resetGame() {
   els.rockEntryScreen?.classList.remove("show");
   document.getElementById("endScreen")?.classList.remove("show");
   els.overlay.classList.remove("show");
+
+  // Register a server-side session so the score submission can be validated.
+  // Non-blocking: if this fails the score simply won't be accepted server-side.
+  if (isEnabled() && state.playerName && state.playerName !== "Guest") {
+    startSession(state.playerIP).then(id => { state.sessionId = id; }).catch(() => {});
+  }
 }
 
 export function pauseNormalSpawning() {
@@ -329,11 +336,17 @@ function endGame(message) {
       lbStatusEl.textContent = "Name is registered to a different device.";
     } else if (result.reason === "no_ip") {
       lbStatusEl.textContent = "Couldn't verify identity — score not saved.";
+    } else if (result.reason === "too_fast") {
+      lbStatusEl.textContent = "Score rejected: game session too short.";
+    } else if (result.reason === "score_implausible") {
+      lbStatusEl.textContent = "Score rejected: exceeds level maximum.";
+    } else if (["no_session", "invalid_session", "session_used", "session_ip_mismatch"].includes(result.reason)) {
+      lbStatusEl.textContent = "Score rejected: session invalid.";
     }
   };
 
   if (name && name !== "Guest" && score > 0) {
-    _submitChain = submitScore(name, score, level, ip, accuracy).then(result => {
+    _submitChain = submitScore(name, score, level, ip, accuracy, state.sessionId).then(result => {
       setLbStatus(result);
       return doFetch();
     });

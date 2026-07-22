@@ -78,15 +78,43 @@ export async function checkNameAvailable(name, ip) {
   }
 }
 
-// ── Score submission (via stored procedure, max-3 per name, name tied to IP) ─
-export async function submitScore(name, score, level, ip, accuracy = 100) {
+// ── Session management ────────────────────────────────────────────────────────
+// A session token is created server-side when a real game starts and must be
+// included in the score submission. This proves the score came from an actual
+// game session with the correct IP and timing, rather than a manual API call.
+
+export async function startSession(ip) {
+  if (!isEnabled() || !ip || ip === "unknown") return null;
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/start_session`, {
+      method:  "POST",
+      headers: apiHeaders(),
+      body:    JSON.stringify({ p_ip: ip }),
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json?.session_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+// ── Score submission ──────────────────────────────────────────────────────────
+export async function submitScore(name, score, level, ip, accuracy = 100, sessionId = null) {
   if (!isEnabled() || !name || score <= 0) return null;
   if (!ip || ip === "unknown") return { inserted: false, reason: "no_ip" };
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_score`, {
       method:  "POST",
       headers: apiHeaders(),
-      body:    JSON.stringify({ p_name: name, p_ip: ip, p_score: score, p_level: level, p_accuracy: accuracy }),
+      body:    JSON.stringify({
+        p_name:       name,
+        p_ip:         ip,
+        p_score:      score,
+        p_level:      level,
+        p_accuracy:   accuracy,
+        p_session_id: sessionId,
+      }),
     });
     if (!res.ok) return null;
     const json = await res.json();

@@ -90,6 +90,7 @@ export const state = {
   // player identity
   playerName: "",
   playerIP: "",
+  sessionId: null,
   // auto-attack
   autoAttackMode: AUTO_ATTACK_MODES[0],
   // accuracy tracking
