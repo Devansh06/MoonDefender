@@ -3,7 +3,8 @@ import { clamp, rand } from "./utils.js";
 import { canvas, ctx, state } from "./state.js";
 
 export function starnetRange() {
-  return state.earth.r + (state.moon.orbit - state.earth.r) * 0.5;
+  const frac = Math.min(state.w, state.h) < 500 ? 0.68 : 0.50;
+  return state.earth.r + (state.moon.orbit - state.earth.r) * frac;
 }
 
 export function resize() {
@@ -25,7 +26,7 @@ export function resize() {
     r: Math.min(shortSide * 0.17, 190),
   };
   state.moon = {
-    orbit: state.earth.r * 1.82,
+    orbit: state.earth.r * 2.0,
     r: Math.max(13, state.earth.r * 0.19),
     angle: -Math.PI / 2,
     speed: 0.42,
@@ -34,7 +35,7 @@ export function resize() {
   };
   state.satellite = {
     orbit: starnetRange() + Math.max(18, state.earth.r * 0.12),
-    r: Math.max(8, state.earth.r * 0.055),
+    r: Math.max(5, state.earth.r * 0.055),
     angle: state.moon.angle + state.satelliteOffset,
     x: 0,
     y: 0,

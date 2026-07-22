@@ -66,11 +66,13 @@ export function resetGame() {
   state.spawnRateMultiplier = 1;
   state.blasterDisabled = false;
   state.bossActive = false;
+  state.levelTransitioning = false;
+  state.levelTransitionClock = 0;
   state.hazardBanner = null;
   state.autoAttackMode = AUTO_ATTACK_MODES[0];
   state.running = true;
   state.paused = false;
-  els.pauseBtn.innerHTML = "&#x23F8;";
+  els.pauseBtn.innerHTML = "⏸︎";
   els.pauseBtn.title = "Pause";
   els.pauseBtn.classList.remove("is-paused");
   selectWeapon("deflector");
@@ -159,15 +161,29 @@ function nextLevel() {
   const hazardType = state.hazardSchedule[state.level - 1];
   if (hazardType) activateHazardEvent(hazardType);
 
+  const isBoss = BOSS_LEVELS.has(state.level);
+  const bannerText = isBoss ? `LEVEL ${state.level} — CATASTROPHE INCOMING!` : `LEVEL ${state.level}`;
+  state.hazardBanner = {
+    text: bannerText,
+    timeLeft: 3.5,
+    color: isBoss ? undefined : "rgba(10, 70, 150, 0.90)",
+  };
+  state.levelTransitioning = true;
+  state.levelTransitionClock = 3;
+  state.spawnClock = 99999;
+}
+
+function finishLevelTransition() {
+  state.levelTransitioning = false;
   if (BOSS_LEVELS.has(state.level)) {
     state.bossActive = true;
     for (let i = 0; i < 2; i += 1) spawnRock();
     spawnBoss();
-    if (!state.hazardBanner) state.hazardBanner = { text: `LEVEL ${state.level} — CATASTROPHE INCOMING!`, timeLeft: 3 };
   } else {
     const count = Math.min(4, Math.ceil(state.level / 2) + 1);
     for (let i = 0; i < count; i += 1) spawnRock();
   }
+  state.spawnClock = 2.5;
 }
 
 let endLbRows = null;
@@ -438,7 +454,11 @@ function update(dt) {
     state.levelClock = 5;
   }
 
-  if (state.levelClock <= 0 && !state.bossActive && !state.tutorialMode) nextLevel();
+  if (state.levelClock <= 0 && !state.bossActive && !state.tutorialMode && !state.levelTransitioning) nextLevel();
+  if (state.levelTransitioning && !state.tutorialMode) {
+    state.levelTransitionClock -= dt;
+    if (state.levelTransitionClock <= 0) finishLevelTransition();
+  }
   if (state.tutorialMode) tutorialTick(dt);
   if (state.damage >= 100) endGame("Earth took too many hits.");
 }
@@ -446,7 +466,7 @@ function update(dt) {
 function togglePause() {
   if (!state.running) return;
   state.paused = !state.paused;
-  els.pauseBtn.innerHTML = state.paused ? "&#x25B6;" : "&#x23F8;";
+  els.pauseBtn.innerHTML = state.paused ? "▶︎" : "⏸︎";
   els.pauseBtn.title = state.paused ? "Resume" : "Pause";
   els.pauseBtn.classList.toggle("is-paused", state.paused);
 }

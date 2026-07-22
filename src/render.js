@@ -119,7 +119,7 @@ function drawStarnetRangeRing() {
     ctx.shadowColor = "#72e6ff";
     ctx.shadowBlur = 28;
     ctx.strokeStyle = "#72e6ff";
-    ctx.lineWidth = 10;
+    ctx.lineWidth = 6;
     ctx.beginPath();
     ctx.arc(state.earth.x, state.earth.y, radius, 0, TAU);
     ctx.stroke();
@@ -406,7 +406,7 @@ function drawStarnetBadge() {
   const { x, y, r } = state.earth;
   const count  = state.starnet;
   const has    = count > 0;
-  const R      = r * 0.28;
+  const R      = Math.max(r * 0.28, 26);
   const CYAN   = "#72e6ff";
   const RED    = "#ff4e6e";
   const color  = has ? CYAN : RED;
@@ -810,15 +810,16 @@ function drawReticle() {
 function drawHazardBanner() {
   if (!state.hazardBanner) return;
   const alpha = clamp(state.hazardBanner.timeLeft * 1.2, 0, 1);
+  const isLevel = !!state.hazardBanner.color;
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle = "rgba(200, 60, 20, 0.88)";
-  ctx.fillRect(0, state.h * 0.46, state.w, 50);
+  ctx.fillStyle = state.hazardBanner.color || "rgba(200, 60, 20, 0.88)";
+  ctx.fillRect(0, state.h * 0.46, state.w, isLevel ? 60 : 50);
   ctx.fillStyle = "#fff";
-  ctx.font = "bold 18px sans-serif";
+  ctx.font = `bold ${isLevel ? 24 : 18}px sans-serif`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(state.hazardBanner.text, state.w / 2, state.h * 0.46 + 25);
+  ctx.fillText(state.hazardBanner.text, state.w / 2, state.h * 0.46 + (isLevel ? 30 : 25));
   ctx.restore();
 }
 

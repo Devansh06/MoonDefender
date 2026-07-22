@@ -80,6 +80,8 @@ export const state = {
   hazardEvent: null, hazardBanner: null,
   gravityMultiplier: 1, moonSpeedMultiplier: 1,
   spawnRateMultiplier: 1, blasterDisabled: false,
+  // level transition
+  levelTransitioning: false, levelTransitionClock: 0,
   // boss
   bossActive: false,
   // tutorial

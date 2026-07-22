@@ -126,7 +126,7 @@ button {
 }
 
 .metric strong {
-  font-size: 22px;
+  font-size: 17px;
   line-height: 1;
 }
 
@@ -1292,12 +1292,12 @@ kbd {
   }
 
   .metric {
-    min-height: 34px;
-    padding: 4px 8px;
+    min-height: 28px;
+    padding: 3px 6px;
   }
 
   .metric strong {
-    font-size: 16px;
+    font-size: 13px;
   }
 
   .weapon-panel {

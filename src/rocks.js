@@ -7,7 +7,8 @@ import { addBurst, addCometTrail, addStarnetShock } from "./render.js";
 
 function chooseRockType() {
   const r = Math.random();
-  if (state.level >= 3 && r < 0.07) return "healing";
+  const healBonus = [4, 6, 9].includes(state.level);
+  if (state.level >= 3 && r < (healBonus ? 0.18 : 0.07)) return "healing";
   if (state.level >= 2 && r < 0.17) return "comet";
   const activeArmored = state.rocks.filter(rock => !rock.cleared && rock.rockType === "armored").length;
   if (state.level >= 3 && activeArmored === 0 && r < 0.28) return "armored";
