@@ -81,6 +81,7 @@ export async function checkNameAvailable(name, ip) {
 // ── Score submission (via stored procedure, max-3 per name, name tied to IP) ─
 export async function submitScore(name, score, level, ip, accuracy = 100) {
   if (!isEnabled() || !name || score <= 0) return null;
+  if (!ip || ip === "unknown") return { inserted: false, reason: "no_ip" };
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/submit_score`, {
       method:  "POST",

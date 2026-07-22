@@ -187,6 +187,7 @@ function finishLevelTransition() {
 }
 
 let endLbRows = null;
+let _submitChain = null;
 
 const COUNTRY_CENTROIDS = {
   "United States":         [37,  -98],
@@ -294,8 +295,11 @@ function endGame(message) {
   drawWorldMap();
 
   endLbRows = null;
+  _submitChain = null;
   document.getElementById("endLeaderboard").style.display = "none";
   document.getElementById("endLbList").innerHTML = '<div class="lb-loading">Loading…</div>';
+  const lbStatusEl = document.getElementById("endLbStatus");
+  if (lbStatusEl) lbStatusEl.textContent = "";
 
   els.tutorialOverlay.classList.remove("show");
   document.getElementById("endScreen").classList.add("show");
@@ -304,16 +308,36 @@ function endGame(message) {
   const level = state.level;
   const name  = state.playerName;
   const ip    = state.playerIP;
+
   const doFetch = async () => {
     endLbRows = await fetchLeaderboard();
-    if (document.getElementById("endLeaderboard").style.display !== "none") {
+    const lbEl = document.getElementById("endLeaderboard");
+    if (lbEl && lbEl.style.display !== "none") {
       renderLbRows(endLbRows, document.getElementById("endLbList"));
     }
   };
+
+  const setLbStatus = (result) => {
+    if (!lbStatusEl || !isEnabled()) return;
+    if (!result) { lbStatusEl.textContent = ""; return; }
+    if (result.inserted) {
+      lbStatusEl.textContent = "Personal best saved to leaderboard.";
+    } else if (result.reason === "not_beaten") {
+      lbStatusEl.textContent = "Score didn't beat your personal best — not saved.";
+    } else if (result.reason === "name_taken") {
+      lbStatusEl.textContent = "Name is registered to a different device.";
+    } else if (result.reason === "no_ip") {
+      lbStatusEl.textContent = "Couldn't verify identity — score not saved.";
+    }
+  };
+
   if (name && name !== "Guest" && score > 0) {
-    submitScore(name, score, level, ip, accuracy).then(doFetch);
+    _submitChain = submitScore(name, score, level, ip, accuracy).then(result => {
+      setLbStatus(result);
+      return doFetch();
+    });
   } else {
-    doFetch();
+    _submitChain = doFetch();
   }
 }
 
@@ -710,8 +734,13 @@ document.getElementById("endLbBtn")?.addEventListener("click", () => {
   if (endLbRows) {
     renderLbRows(endLbRows, listEl);
   } else {
-    listEl.innerHTML = '<div class="lb-loading">Loading…</div>';
-    fetchLeaderboard().then(rows => { endLbRows = rows; renderLbRows(rows, listEl); });
+    // Wait on the submit+fetch chain — doFetch will render when ready since lb is now visible.
+    // Fallback: if no chain (shouldn't happen), fetch independently.
+    if (!_submitChain) {
+      listEl.innerHTML = '<div class="lb-loading">Loading…</div>';
+      fetchLeaderboard().then(rows => { endLbRows = rows; renderLbRows(rows, listEl); });
+    }
+    // _submitChain's doFetch will fire renderLbRows once complete because lb is now visible.
   }
 });
 
