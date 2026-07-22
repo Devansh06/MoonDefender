@@ -20,10 +20,11 @@ export function resize() {
   if (shell) { shell.style.width = state.w + 'px'; shell.style.height = state.h + 'px'; }
 
   const shortSide = Math.min(state.w, state.h);
+  const mobile = shortSide < 500;
   state.earth = {
     x: state.w * 0.5,
     y: state.h * 0.52,
-    r: Math.min(shortSide * 0.17, 190),
+    r: Math.min(shortSide * (mobile ? 0.12 : 0.17), 190),
   };
   state.moon = {
     orbit: state.earth.r * 2.0,
@@ -33,8 +34,9 @@ export function resize() {
     x: 0,
     y: 0,
   };
+  const satOffset = mobile ? Math.max(10, state.earth.r * 0.10) : Math.max(18, state.earth.r * 0.12);
   state.satellite = {
-    orbit: starnetRange() + Math.max(18, state.earth.r * 0.12),
+    orbit: starnetRange() + satOffset,
     r: Math.max(5, state.earth.r * 0.055),
     angle: state.moon.angle + state.satelliteOffset,
     x: 0,
@@ -59,7 +61,7 @@ export function updateMoon(dt) {
   state.moon.angle += state.moon.speed * state.moonSpeedMultiplier * dt;
   state.moon.x = state.earth.x + Math.cos(state.moon.angle) * state.moon.orbit;
   state.moon.y = state.earth.y + Math.sin(state.moon.angle) * state.moon.orbit;
-  state.satellite.orbit = starnetRange() + Math.max(18, state.earth.r * 0.12);
+  state.satellite.orbit = starnetRange() + (Math.min(state.w, state.h) < 500 ? Math.max(10, state.earth.r * 0.10) : Math.max(18, state.earth.r * 0.12));
   state.satellite.angle = state.moon.angle + state.satelliteOffset;
   state.satellite.x = state.earth.x + Math.cos(state.satellite.angle) * state.satellite.orbit;
   state.satellite.y = state.earth.y + Math.sin(state.satellite.angle) * state.satellite.orbit;
