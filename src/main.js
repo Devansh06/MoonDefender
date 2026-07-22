@@ -286,6 +286,7 @@ function endGame(message) {
   document.getElementById("endTitle").textContent = state.damage >= 100 ? "Earth Lost" : "Mission Complete";
   document.getElementById("endMsg").textContent = message;
   document.getElementById("endScore").textContent = `Score: ${state.score.toLocaleString()}`;
+  document.getElementById("endLevel").textContent = `Level: ${state.level}`;
   document.getElementById("endAccuracy").textContent = `${accuracy}%`;
   document.getElementById("statsRockBody").innerHTML = Object.entries(state.rockStats).map(([type, s]) => {
     if (type === "boss") return "";

@@ -1110,12 +1110,25 @@ kbd {
   color: #031019;
 }
 
+.end-score-row {
+  display: flex;
+  justify-content: center;
+  align-items: baseline;
+  gap: 20px;
+}
+
 .end-score {
   font-size: 22px;
   font-weight: 700;
   color: var(--cyan);
   margin: 2px 0 12px;
   letter-spacing: .02em;
+}
+
+.end-level-val {
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .world-map-canvas {
